@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - Mój Portfel Go</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Mój Portfel Go 💰</h1>
+        <nav>
+            <a href="/">Strona Główna</a>
+            </nav>
+    </header>
+
+    <main>
+        {{template "content" .}}
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Mój Portfel Go. Wszystkie prawa zastrzeżone.</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

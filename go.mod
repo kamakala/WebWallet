@@ -1,3 +1,3 @@
-module github.com/kamakala/webwallet
+module webwallet
 
 go 1.24.5
