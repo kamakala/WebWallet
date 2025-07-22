@@ -4,32 +4,45 @@ body {
     padding: 0;
     background-color: #f4f4f4;
     color: #333;
+    line-height: 1.6;
 }
 
 header {
-    background-color: #333;
+    background-color: #2c3e50; /* Ciemniejszy odcień niebieskiego/szarego */
     color: #fff;
     padding: 1rem 0;
     text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 header h1 {
     margin: 0;
+    font-size: 2.2rem;
+}
+
+nav {
+    margin-top: 10px;
 }
 
 nav a {
-    color: #fff;
+    color: #ecf0f1; /* Jaśniejszy kolor dla linków */
     text-decoration: none;
-    margin: 0 10px;
+    margin: 0 15px;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+nav a:hover {
+    color: #3498db; /* Kolor podświetlenia */
 }
 
 main {
     padding: 20px;
-    max-width: 800px;
+    max-width: 1000px; /* Zwiększamy szerokość, aby zmieścić tabele */
     margin: 20px auto;
     background-color: #fff;
     border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
 }
 
 footer {
@@ -37,7 +50,69 @@ footer {
     padding: 1rem 0;
     background-color: #eee;
     color: #666;
-    position: fixed;
-    bottom: 0;
+    margin-top: 30px; /* Daj trochę przestrzeni nad stopką */
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+}
+
+/* Nowe style dla podsumowania i tabel */
+.summary-cards {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap; /* Pozwala na zawijanie kart na mniejszych ekranach */
+    gap: 20px; /* Odstęp między kartami */
+    margin-bottom: 30px;
+}
+
+.card {
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    padding: 20px;
+    flex: 1; /* Pozwala kartom rosnąć i kurczyć się */
+    min-width: 280px; /* Minimalna szerokość karty */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.card h3 {
+    color: #2c3e50;
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+
+.card p {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin: 5px 0;
+}
+
+table {
     width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+table, th, td {
+    border: 1px solid #ddd;
+}
+
+th, td {
+    padding: 10px;
+    text-align: left;
+}
+
+th {
+    background-color: #2c3e50;
+    color: white;
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.profit {
+    color: #27ae60; /* Zielony dla zysku */
+}
+
+.loss {
+    color: #e74c3c; /* Czerwony dla straty */
 }
