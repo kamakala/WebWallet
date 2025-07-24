@@ -1,45 +1,48 @@
 package handlers
 
 import (
+	"context" // Potrzebne do kontekstu dla operacji DB
 	"log"
 	"net/http"
 	"text/template"
 	"time"
 	"webwallet/internal/models"
+	"webwallet/internal/repository" // Importujemy repozytorium
 )
 
 // PageData to struktura do przekazywania danych do szablonów HTML.
 type PageData struct {
 	Title                string
 	Content              string
-	PortfolioData        *models.InvestmentPortfolio // Zmieniamy z WalletData na PortfolioData
-	MonthlySubsCost      string                      // Sformatowany koszt subskrypcji
-	TotalPortfolioValue  string                      // Sformatowana wartość portfela
-	ProfitLoss           string                      // Sformatowany zysk/strata
-	ProfitLossRaw        float64                     // Sformatowane pod templatke
-	ProfitLossPercentage float64                     // Procentowy zysk/strata
+	PortfolioData        *models.InvestmentPortfolio
+	MonthlySubsCost      string
+	TotalPortfolioValue  string
+	ProfitLoss           string
+	ProfitLossRaw        float64
+	ProfitLossPercentage float64
 }
 
-var tmpl *template.Template
+// AppHandler zawiera zależności (np. repozytorium bazy danych)
+type AppHandler struct {
+	tmpl          *template.Template
+	portfolioRepo *repository.PortfolioRepo // Repozytorium jest teraz polem w AppHandler
+}
 
-// Globalna instancja portfela inwestycyjnego do celów demonstracyjnych.
-var currentPortfolio *models.InvestmentPortfolio
-
-func init() {
+// NewAppHandler tworzy nową instancję AppHandler z zależnościami.
+func NewAppHandler(repo *repository.PortfolioRepo) *AppHandler {
 	// Definiowanie mapy funkcji dla szablonów
 	funcMap := template.FuncMap{
 		"mul": func(a, b float64) float64 {
 			return a * b
 		},
-		"add": func(a, b float64) float64 { // Możesz dodać inne funkcje, np. dodawanie
+		"add": func(a, b float64) float64 {
 			return a + b
 		},
-		// Możesz dodać więcej funkcji pomocniczych tutaj
 	}
 
-	var err error
-	// Teraz używamy Funcs() do dodania naszych funkcji przed parsowaniem plików
-	tmpl, err = template.New("main").Funcs(funcMap).ParseFiles(
+	// Inicjalizacja szablonów (teraz w NewAppHandler, a nie w init())
+	// Daje to większą kontrolę nad szablonami, np. ich przeładowywaniem.
+	parsedTmpl, err := template.New("main").Funcs(funcMap).ParseFiles(
 		"internal/templates/layout.html",
 		"internal/templates/home.html",
 	)
@@ -47,84 +50,68 @@ func init() {
 		log.Fatalf("Error parsing templates: %v", err)
 	}
 
-	// Inicjalizacja przykładowego portfela inwestycyjnego
-	currentPortfolio = models.NewInvestmentPortfolio()
-
-	// Dodanie przykładowych aktywów
-	currentPortfolio.AddAsset(models.Asset{
-		ID:       "A1",
-		Name:     "Akcje Spółki X",
-		Symbol:   "SPX",
-		Type:     "Akcje",
-		Quantity: 10.0,
-		AvgCost:  150.75,
-	})
-	currentPortfolio.AddAsset(models.Asset{
-		ID:       "A2",
-		Name:     "Gotówka w PLN",
-		Symbol:   "PLN",
-		Type:     "Gotówka",
-		Quantity: 5000.00,
-		AvgCost:  1.0, // Koszt gotówki to 1
-	})
-	currentPortfolio.AddAsset(models.Asset{
-		ID:       "A3",
-		Name:     "ETF Globalny",
-		Symbol:   "GLO",
-		Type:     "ETF",
-		Quantity: 5.0,
-		AvgCost:  220.00,
-	})
-	currentPortfolio.AddAsset(models.Asset{
-		ID:       "A4",
-		Name:     "Obligacje Skarbowe X",
-		Symbol:   "OSX",
-		Type:     "Obligacje",
-		Quantity: 2.0, // Dwie obligacje po 1000 PLN = 2000 PLN
-		AvgCost:  1000.00,
-	})
-
-	// Dodanie przykładowych subskrypcji
-	currentPortfolio.AddSubscription(models.Subscription{
-		ID:        "S1",
-		Name:      "Platforma Inwestycyjna Pro",
-		Cost:      89.99,
-		Frequency: "Miesięcznie",
-		NextDue:   time.Now().AddDate(0, 1, 0), // Za miesiąc
-	})
-	currentPortfolio.AddSubscription(models.Subscription{
-		ID:        "S2",
-		Name:      "Usługa Analityczna Premium",
-		Cost:      240.00,
-		Frequency: "Rocznie",
-		NextDue:   time.Now().AddDate(1, 0, 0), // Za rok
-	})
-
-	log.Printf("Portfel inwestycyjny zainicjowany. Całkowita wartość: %.2f PLN\n", currentPortfolio.GetTotalValue())
+	return &AppHandler{
+		tmpl:          parsedTmpl,
+		portfolioRepo: repo, // Wstrzykujemy repozytorium
+	}
 }
 
 // HomeHandler renderuje stronę główną portfela inwestycyjnego.
-func HomeHandler(w http.ResponseWriter, r *http.Request) {
+// Teraz jest to metoda typu AppHandler.
+func (h *AppHandler) HomeHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second) // Kontekst dla operacji DB
+	defer cancel()
 
-	rawProfitLoss := currentPortfolio.GetProfitLoss()
-	// Tymczasowy log do debugowania: sprawdź typ i wartość ProfitLossRaw
-	//log.Printf("DEBUG: ProfitLossRaw value: %v, type: %T\n", rawProfitLoss, rawProfitLoss)
+	// Ładujemy portfel z bazy danych
+	portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
+	if err != nil {
+		http.Error(w, "Failed to load portfolio", http.StatusInternalServerError)
+		log.Printf("Error loading portfolio from DB: %v", err)
+		return
+	}
+
+	// Jeśli portfel jest nowy/pusty, inicjalizujemy go przykładowymi danymi i zapisujemy.
+	// Robimy to tylko raz, przy pierwszym uruchomieniu i braku danych w DB.
+	if len(portfolio.Assets) == 0 && len(portfolio.Subscriptions) == 0 {
+		log.Println("Database is empty, populating with initial sample data...")
+		portfolio.AddAsset(models.Asset{
+			ID:       "A1",
+			Name:     "Akcje Testowe (DB)",
+			Symbol:   "DBG",
+			Type:     "Akcje",
+			Quantity: 10.0,
+			AvgCost:  100.00,
+		})
+		portfolio.AddSubscription(models.Subscription{
+			ID:        "S1",
+			Name:      "Miesięczna Sub (DB)",
+			Cost:      50.00,
+			Frequency: "Miesięcznie",
+			NextDue:   time.Now().AddDate(0, 1, 0),
+		})
+		// Zapisz początkowy portfel do bazy danych
+		if err := h.portfolioRepo.SavePortfolio(ctx, portfolio); err != nil {
+			log.Printf("Could not save initial portfolio to DB: %v", err)
+		}
+	}
+
+	rawProfitLoss := portfolio.GetProfitLoss()
 
 	data := PageData{
 		Title:                "Mój Portfel Inwestycyjny",
 		Content:              "Przegląd Twoich aktywów i kosztów:",
-		PortfolioData:        currentPortfolio,
-		MonthlySubsCost:      models.FormatCurrency(currentPortfolio.GetMonthlySubscriptionCost()),
-		TotalPortfolioValue:  models.FormatCurrency(currentPortfolio.GetTotalValue()),
+		PortfolioData:        portfolio, // Przekazujemy załadowany portfel
+		MonthlySubsCost:      models.FormatCurrency(portfolio.GetMonthlySubscriptionCost()),
+		TotalPortfolioValue:  models.FormatCurrency(portfolio.GetTotalValue()),
 		ProfitLoss:           models.FormatCurrency(rawProfitLoss),
-		ProfitLossRaw:        rawProfitLoss, // Tutaj przypisujemy float64
-		ProfitLossPercentage: currentPortfolio.GetProfitLossPercentage(),
+		ProfitLossRaw:        rawProfitLoss,
+		ProfitLossPercentage: portfolio.GetProfitLossPercentage(),
 	}
 
-	err := tmpl.ExecuteTemplate(w, "layout.html", data)
+	err = h.tmpl.ExecuteTemplate(w, "layout.html", data)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("Error executing template: %v", err)
-		return // DODANY RETURN
+		return
 	}
 }

@@ -1,0 +1,16 @@
+# docker-compose.yml
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:latest # Używamy najnowszej stabilnej wersji MongoDB
+    container_name: mongodb_portfolio
+    ports:
+      - "27017:27017" # Domyślny port MongoDB
+    volumes:
+      - mongo-data:/data/db # Trwałe przechowywanie danych
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin # Opcjonalnie: użytkownik do testów
+      MONGO_INITDB_ROOT_PASSWORD: adminpassword # Opcjonalnie: hasło do testów
+
+volumes:
+  mongo-data:
