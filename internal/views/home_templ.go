@@ -57,7 +57,7 @@ func Home(
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</p><div class=\"summary-cards\"><div class=\"card\"><h3>Łączna Wartość Portfela</h3><p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</p><p><a href=\"/add-asset\">Dodaj nowe aktywo</a></p><div class=\"summary-cards\"><div class=\"card\"><h3>Łączna Wartość Portfela</h3><p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

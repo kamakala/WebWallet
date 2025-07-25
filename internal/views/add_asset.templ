@@ -1,0 +1,48 @@
+// internal/views/add_asset.templ
+package views
+
+import "webwallet/internal/models" // Potrzebne, bo Layout oczekuje danych portfolio
+
+// AddAssetForm przyjmuje komunikat o błędzie lub sukcesie do wyświetlenia użytkownikowi.
+templ AddAssetForm(message string) {
+	// Przekazujemy pusty portfel i inne dane, których ten konkretny widok nie używa,
+	// ale które są wymagane przez Layout. To jest prostsze niż poprzednie podejście.
+	@Layout("Dodaj Nowe Aktywo", RenderAddAssetContent(message), &models.InvestmentPortfolio{}, "", "", "", 0, 0)
+}
+
+// RenderAddAssetContent to pomocniczy komponent renderujący samą zawartość formularza.
+// Jest oddzielony, aby można go było łatwo przekazać do Layout.
+templ RenderAddAssetContent(message string) {
+    <div class="form-container">
+        <h2>Dodaj Nowe Aktywo</h2>
+
+        if message != "" {
+            <p class="message">{ message }</p>
+        }
+
+        <form action="/add-asset" method="POST">
+            <div class="form-group">
+                <label for="name">Nazwa Aktywa:</label>
+                <input type="text" id="name" name="name" required/>
+            </div>
+            <div class="form-group">
+                <label for="symbol">Symbol (np. SPX):</label>
+                <input type="text" id="symbol" name="symbol" required/>
+            </div>
+            <div class="form-group">
+                <label for="type">Typ (np. Akcje, Gotówka, ETF, Obligacje):</label>
+                <input type="text" id="type" name="type" required/>
+            </div>
+            <div class="form-group">
+                <label for="quantity">Ilość:</label>
+                <input type="number" id="quantity" name="quantity" step="0.01" min="0" required/>
+            </div>
+            <div class="form-group">
+                <label for="avgCost">Średni Koszt Zakupu (za jednostkę):</label>
+                <input type="number" id="avgCost" name="avgCost" step="0.01" min="0" required/>
+            </div>
+            <button type="submit">Dodaj Aktywo</button>
+        </form>
+        <p><a href="/">Powrót do portfela</a></p>
+    </div>
+}

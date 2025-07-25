@@ -3,6 +3,8 @@ package models
 import (
 	"fmt"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Asset reprezentuje pojedynczy składnik majątku w portfelu inwestycyjnym.
@@ -130,4 +132,8 @@ func (p *InvestmentPortfolio) GetProfitLossPercentage() float64 {
 // FormatCurrency to pomocnicza funkcja do formatowania kwot.
 func FormatCurrency(amount float64) string {
 	return fmt.Sprintf("%.2f PLN", amount)
+}
+
+func GenerateID() string {
+	return uuid.New().String()
 }

@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"webwallet/internal/models"
@@ -98,6 +100,95 @@ func (h *AppHandler) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("Error rendering templ component: %v", err)
+		return
+	}
+}
+
+// AddAssetHandler obsługuje dodawanie nowych aktywów.
+func (h *AppHandler) AddAssetHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var message string // Komunikat dla użytkownika
+
+	if r.Method == http.MethodPost {
+		// Przetwarzanie danych formularza
+		err := r.ParseForm()
+		if err != nil {
+			message = fmt.Sprintf("Błąd parsowania formularza: %v", err)
+			log.Printf("Error parsing form: %v", err)
+			// Renderuj formularz ponownie z komunikatem o błędzie
+			h.renderAddAssetForm(w, message)
+			return
+		}
+
+		// Pobieranie danych z formularza
+		name := r.FormValue("name")
+		symbol := r.FormValue("symbol")
+		assetType := r.FormValue("type")
+		quantityStr := r.FormValue("quantity")
+		avgCostStr := r.FormValue("avgCost")
+
+		// Walidacja i konwersja danych
+		quantity, err := strconv.ParseFloat(quantityStr, 64)
+		if err != nil {
+			message = "Nieprawidłowa wartość 'Ilość'."
+			h.renderAddAssetForm(w, message)
+			return
+		}
+		avgCost, err := strconv.ParseFloat(avgCostStr, 64)
+		if err != nil {
+			message = "Nieprawidłowa wartość 'Średni Koszt Zakupu'."
+			h.renderAddAssetForm(w, message)
+			return
+		}
+
+		// Utwórz nowe aktywo
+		newAsset := models.Asset{
+			ID:       models.GenerateID(), // Utwórz nową funkcję GenerateID w models
+			Name:     name,
+			Symbol:   symbol,
+			Type:     assetType,
+			Quantity: quantity,
+			AvgCost:  avgCost,
+			//CurrentPrice: avgCost, // Na razie CurrentPrice = AvgCost
+		}
+
+		// Wczytaj aktualny portfel, dodaj aktywo i zapisz
+		portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
+		if err != nil {
+			message = fmt.Sprintf("Błąd ładowania portfela: %v", err)
+			log.Printf("Error loading portfolio for asset addition: %v", err)
+			h.renderAddAssetForm(w, message)
+			return
+		}
+
+		portfolio.AddAsset(newAsset) // Dodaj nowe aktywo do portfela
+
+		if err := h.portfolioRepo.SavePortfolio(ctx, portfolio); err != nil {
+			message = fmt.Sprintf("Błąd zapisu portfela: %v", err)
+			log.Printf("Error saving portfolio after asset addition: %v", err)
+			h.renderAddAssetForm(w, message)
+			return
+		}
+
+		message = "Aktywo dodane pomyślnie!"
+		log.Printf("Asset added: %+v", newAsset)
+		// Przekieruj na stronę główną lub wyświetl formularz z sukcesem
+		http.Redirect(w, r, "/", http.StatusSeeOther) // Przekieruj na główną stronę
+		return
+	}
+
+	// GET request: wyświetl formularz
+	h.renderAddAssetForm(w, "")
+}
+
+// renderAddAssetForm pomaga renderować komponent AddAssetForm
+func (h *AppHandler) renderAddAssetForm(w http.ResponseWriter, message string) {
+	err := views.AddAssetForm(message).Render(context.Background(), w)
+	if err != nil {
+		http.Error(w, "Error rendering add asset form", http.StatusInternalServerError)
+		log.Printf("Error rendering add asset form: %v", err)
 		return
 	}
 }

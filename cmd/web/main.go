@@ -46,6 +46,8 @@ func main() {
 	// Ustawienie handlera dla ścieżki głównej (teraz używamy metody z mainHandler)
 	http.HandleFunc("/", mainHandler.HomeHandler)
 
+	http.HandleFunc("/add-asset", mainHandler.AddAssetHandler) // Rejestracja dla GET i POST
+
 	// Ustawienie handlera dla statycznych plików
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
