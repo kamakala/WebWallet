@@ -1,0 +1,36 @@
+// internal/views/layout.templ
+package views
+
+// Importujemy pakiet fmt i models, jeśli będą potrzebne w layoucie
+import "fmt"
+import "webwallet/internal/models"
+import "time" // Dla formatowania daty
+
+
+// layout.templ będzie przyjmował tytuł strony i jej zawartość (jako func)
+templ Layout(title string, content templ.Component, portfolioData *models.InvestmentPortfolio, monthlySubsCost, totalPortfolioValue, profitLoss string, profitLossRaw float64, profitLossPercentage float64) {
+	<!DOCTYPE html>
+	<html lang="pl">
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>{ title }</title>
+		<link rel="stylesheet" href="/static/css/style.css"/>
+	</head>
+	<body>
+		<header>
+			<h1>Mój Portfel Inwestycyjny</h1>
+			<nav>
+				<a href="/">Strona Główna</a>
+				</nav>
+		</header>
+		<main>
+			// Tutaj renderujemy główną treść strony
+			@content
+		</main>
+		<footer>
+			<p>&copy; { fmt.Sprintf("%d", time.Now().Year()) } Mój Portfel Inwestycyjny. Wszelkie prawa zastrzeżone.</p>
+		</footer>
+	</body>
+	</html>
+}

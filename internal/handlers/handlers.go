@@ -1,16 +1,17 @@
 package handlers
 
 import (
-	"context" // Potrzebne do kontekstu dla operacji DB
+	"context"
 	"log"
 	"net/http"
-	"text/template"
 	"time"
+
 	"webwallet/internal/models"
-	"webwallet/internal/repository" // Importujemy repozytorium
+	"webwallet/internal/repository"
+	"webwallet/internal/views" // Importujemy pakiet z komponentami templ
 )
 
-// PageData to struktura do przekazywania danych do szablonów HTML.
+// PageData (teraz już nie tak potrzebna, ale zostawiamy na razie strukturę danych przekazywaną do widoku)
 type PageData struct {
 	Title                string
 	Content              string
@@ -22,47 +23,24 @@ type PageData struct {
 	ProfitLossPercentage float64
 }
 
-// AppHandler zawiera zależności (np. repozytorium bazy danych)
+// AppHandler zawiera zależności (np. repozytorium bazy danych).
+// `tmpl` nie jest już *template.Template, bo używamy templ.Component.
 type AppHandler struct {
-	tmpl          *template.Template
-	portfolioRepo *repository.PortfolioRepo // Repozytorium jest teraz polem w AppHandler
+	portfolioRepo *repository.PortfolioRepo
 }
 
 // NewAppHandler tworzy nową instancję AppHandler z zależnościami.
 func NewAppHandler(repo *repository.PortfolioRepo) *AppHandler {
-	// Definiowanie mapy funkcji dla szablonów
-	funcMap := template.FuncMap{
-		"mul": func(a, b float64) float64 {
-			return a * b
-		},
-		"add": func(a, b float64) float64 {
-			return a + b
-		},
-	}
-
-	// Inicjalizacja szablonów (teraz w NewAppHandler, a nie w init())
-	// Daje to większą kontrolę nad szablonami, np. ich przeładowywaniem.
-	parsedTmpl, err := template.New("main").Funcs(funcMap).ParseFiles(
-		"internal/templates/layout.html",
-		"internal/templates/home.html",
-	)
-	if err != nil {
-		log.Fatalf("Error parsing templates: %v", err)
-	}
-
 	return &AppHandler{
-		tmpl:          parsedTmpl,
-		portfolioRepo: repo, // Wstrzykujemy repozytorium
+		portfolioRepo: repo,
 	}
 }
 
 // HomeHandler renderuje stronę główną portfela inwestycyjnego.
-// Teraz jest to metoda typu AppHandler.
 func (h *AppHandler) HomeHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second) // Kontekst dla operacji DB
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	// Ładujemy portfel z bazy danych
 	portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
 	if err != nil {
 		http.Error(w, "Failed to load portfolio", http.StatusInternalServerError)
@@ -70,8 +48,6 @@ func (h *AppHandler) HomeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Jeśli portfel jest nowy/pusty, inicjalizujemy go przykładowymi danymi i zapisujemy.
-	// Robimy to tylko raz, przy pierwszym uruchomieniu i braku danych w DB.
 	if len(portfolio.Assets) == 0 && len(portfolio.Subscriptions) == 0 {
 		log.Println("Database is empty, populating with initial sample data...")
 		portfolio.AddAsset(models.Asset{
@@ -89,7 +65,6 @@ func (h *AppHandler) HomeHandler(w http.ResponseWriter, r *http.Request) {
 			Frequency: "Miesięcznie",
 			NextDue:   time.Now().AddDate(0, 1, 0),
 		})
-		// Zapisz początkowy portfel do bazy danych
 		if err := h.portfolioRepo.SavePortfolio(ctx, portfolio); err != nil {
 			log.Printf("Could not save initial portfolio to DB: %v", err)
 		}
@@ -97,21 +72,32 @@ func (h *AppHandler) HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	rawProfitLoss := portfolio.GetProfitLoss()
 
-	data := PageData{
-		Title:                "Mój Portfel Inwestycyjny",
-		Content:              "Przegląd Twoich aktywów i kosztów:",
-		PortfolioData:        portfolio, // Przekazujemy załadowany portfel
-		MonthlySubsCost:      models.FormatCurrency(portfolio.GetMonthlySubscriptionCost()),
-		TotalPortfolioValue:  models.FormatCurrency(portfolio.GetTotalValue()),
-		ProfitLoss:           models.FormatCurrency(rawProfitLoss),
-		ProfitLossRaw:        rawProfitLoss,
-		ProfitLossPercentage: portfolio.GetProfitLossPercentage(),
-	}
+	// Tutaj tworzymy i renderujemy komponenty templ
+	homeComponent := views.Home(
+		"Przegląd Twoich aktywów i kosztów:",
+		portfolio,
+		models.FormatCurrency(portfolio.GetMonthlySubscriptionCost()),
+		models.FormatCurrency(portfolio.GetTotalValue()),
+		models.FormatCurrency(rawProfitLoss),
+		rawProfitLoss,
+		portfolio.GetProfitLossPercentage(),
+	)
 
-	err = h.tmpl.ExecuteTemplate(w, "layout.html", data)
+	// Renderujemy komponent Home wewnątrz komponentu Layout
+	err = views.Layout(
+		"Mój Portfel Inwestycyjny", // Tytuł dla Layout
+		homeComponent,              // Komponent content
+		portfolio,                  // Przekazywanie całego portfela do Layout (jeśli potrzebne w nagłówku/stopce)
+		models.FormatCurrency(portfolio.GetMonthlySubscriptionCost()),
+		models.FormatCurrency(portfolio.GetTotalValue()),
+		models.FormatCurrency(rawProfitLoss),
+		rawProfitLoss,
+		portfolio.GetProfitLossPercentage(),
+	).Render(r.Context(), w)
+
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Error executing template: %v", err)
+		log.Printf("Error rendering templ component: %v", err)
 		return
 	}
 }
