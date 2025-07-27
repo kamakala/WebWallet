@@ -62,6 +62,7 @@ templ Home(
 						<td>{ fmt.Sprintf("%.2f PLN", asset.AvgCost) }</td>
 						<td>{ fmt.Sprintf("%.2f PLN", asset.Quantity * asset.AvgCost) }</td> // Uproszczone obliczenie wartości
 						<td>
+							<a href={ fmt.Sprintf("/update-asset?id=%s", asset.ID) } class="update-button">Dodaj Ilość</a>
 							<form action={ fmt.Sprintf("/delete-asset?id=%s", asset.ID) } method="POST" onsubmit="return confirm('Czy na pewno chcesz usunąć to aktywo?');">
 								<button type="submit" class="delete-button">Usuń</button>
 							</form>

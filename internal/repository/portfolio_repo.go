@@ -138,3 +138,55 @@ func (r *PortfolioRepo) RemoveAsset(ctx context.Context, assetID string) error {
 	log.Printf("Asset with ID %s successfully removed from portfolio.", assetID)
 	return nil
 }
+
+// UpdateAsset aktualizuje aktywo o podanym ID, dodając nową ilość i przeliczając średni koszt zakupu.
+func (r *PortfolioRepo) UpdateAsset(ctx context.Context, assetID string, additionalQuantity, newPurchasePrice float64) error {
+	// 1. Załaduj aktualny portfel
+	portfolio, err := r.LoadPortfolio(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load portfolio for asset update: %w", err)
+	}
+
+	// 2. Znajdź aktywo do zaktualizowania
+	found := false
+	for i, asset := range portfolio.Assets {
+		if asset.ID == assetID {
+			found = true
+
+			// Przelicz nową średnią cenę zakupu
+			// Nowy_AvgCost = ((Stara_Ilosc * Stary_AvgCost) + (Nowa_Ilosc * Nowa_Cena_Zakupu)) / (Stara_Ilosc + Nowa_Ilosc)
+			oldTotalCost := asset.Quantity * asset.AvgCost
+			newTotalCostForAdditional := additionalQuantity * newPurchasePrice
+
+			newQuantity := asset.Quantity + additionalQuantity
+
+			// Unikaj dzielenia przez zero, choć przy quantity > 0 i additionalQuantity > 0 nie powinno się zdarzyć
+			if newQuantity == 0 {
+				return fmt.Errorf("cannot update asset: total quantity would be zero")
+			}
+
+			newAvgCost := (oldTotalCost + newTotalCostForAdditional) / newQuantity
+
+			// Zaktualizuj aktywo w pamięci
+			portfolio.Assets[i].Quantity = newQuantity
+			portfolio.Assets[i].AvgCost = newAvgCost
+			//portfolio.Assets[i].CurrentPrice = newAvgCost // Na razie CurrentPrice = AvgCost
+
+			log.Printf("Asset %s updated: New Quantity=%.2f, New AvgCost=%.2f", asset.Name, newQuantity, newAvgCost)
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("asset with ID %s not found in portfolio for update", assetID)
+	}
+
+	portfolio.CalculateTotals() // Przelicz wartości portfela po aktualizacji
+
+	// 3. Zapisz zaktualizowany portfel z powrotem do bazy danych
+	if err := r.SavePortfolio(ctx, portfolio); err != nil {
+		return fmt.Errorf("failed to save portfolio after asset update: %w", err)
+	}
+
+	return nil
+}

@@ -220,3 +220,141 @@ func (h *AppHandler) DeleteAssetHandler(w http.ResponseWriter, r *http.Request) 
 	log.Printf("Aktywo o ID %s usunięte pomyślnie.", assetID)
 	http.Redirect(w, r, "/", http.StatusSeeOther) // Przekieruj z powrotem na stronę główną
 }
+
+// UpdateAssetHandler obsługuje aktualizację istniejących aktywów.
+func (h *AppHandler) UpdateAssetHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var message string           // Komunikat dla użytkownika
+	var targetAsset models.Asset // Aktywo, które będziemy aktualizować/wyświetlać
+
+	if r.Method == http.MethodPost {
+		// --- Obsługa żądania POST (przetwarzanie formularza) ---
+		err := r.ParseForm()
+		if err != nil {
+			message = fmt.Sprintf("Błąd parsowania formularza: %v", err)
+			log.Printf("Error parsing update asset form: %v", err)
+			// Spróbuj załadować aktywo, żeby formularz nie był pusty
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, a := range portfolio.Assets {
+					if a.ID == r.FormValue("asset_id") {
+						targetAsset = a
+						break
+					}
+				}
+			}
+			h.renderUpdateAssetForm(w, targetAsset, message)
+			return
+		}
+
+		assetID := r.FormValue("asset_id")
+		additionalQuantityStr := r.FormValue("additional_quantity")
+		newPurchasePriceStr := r.FormValue("new_purchase_price")
+
+		if assetID == "" {
+			message = "Brak identyfikatora aktywa do aktualizacji."
+			h.renderUpdateAssetForm(w, targetAsset, message) // targetAsset będzie puste
+			return
+		}
+
+		additionalQuantity, err := strconv.ParseFloat(additionalQuantityStr, 64)
+		if err != nil || additionalQuantity <= 0 {
+			message = "Nieprawidłowa wartość 'Dodatkowa Ilość'. Musi być liczbą większą od zera."
+			// Spróbuj załadować aktywo, żeby formularz nie był pusty
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, a := range portfolio.Assets {
+					if a.ID == assetID {
+						targetAsset = a
+						break
+					}
+				}
+			}
+			h.renderUpdateAssetForm(w, targetAsset, message)
+			return
+		}
+
+		newPurchasePrice, err := strconv.ParseFloat(newPurchasePriceStr, 64)
+		if err != nil || newPurchasePrice <= 0 {
+			message = "Nieprawidłowa wartość 'Cena Zakupu dla Nowej Ilości'. Musi być liczbą większą od zera."
+			// Spróbuj załadować aktywo, żeby formularz nie był pusty
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, a := range portfolio.Assets {
+					if a.ID == assetID {
+						targetAsset = a
+						break
+					}
+				}
+			}
+			h.renderUpdateAssetForm(w, targetAsset, message)
+			return
+		}
+
+		// Wywołaj funkcję repozytorium do aktualizacji aktywa
+		err = h.portfolioRepo.UpdateAsset(ctx, assetID, additionalQuantity, newPurchasePrice)
+		if err != nil {
+			message = fmt.Sprintf("Błąd aktualizacji aktywa: %v", err)
+			log.Printf("Error updating asset (ID: %s): %v", assetID, err)
+			// Spróbuj załadować aktywo, żeby formularz nie był pusty
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, a := range portfolio.Assets {
+					if a.ID == assetID {
+						targetAsset = a
+						break
+					}
+				}
+			}
+			h.renderUpdateAssetForm(w, targetAsset, message)
+			return
+		}
+
+		log.Printf("Aktywo o ID %s zaktualizowane pomyślnie. Dodano %.2f sztuk po %.2f PLN.", assetID, additionalQuantity, newPurchasePrice)
+		http.Redirect(w, r, "/", http.StatusSeeOther) // Przekieruj na stronę główną po sukcesie
+		return
+
+	} else {
+		// --- Obsługa żądania GET (wyświetlanie formularza) ---
+		assetID := r.URL.Query().Get("id")
+		if assetID == "" {
+			http.Error(w, "Brak identyfikatora aktywa do aktualizacji.", http.StatusBadRequest)
+			return
+		}
+
+		portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
+		if err != nil {
+			http.Error(w, "Nie udało się załadować portfela.", http.StatusInternalServerError)
+			log.Printf("Error loading portfolio for update asset form: %v", err)
+			return
+		}
+
+		found := false
+		for _, asset := range portfolio.Assets {
+			if asset.ID == assetID {
+				targetAsset = asset
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			http.Error(w, "Aktywo nie znalezione.", http.StatusNotFound)
+			return
+		}
+
+		h.renderUpdateAssetForm(w, targetAsset, "")
+	}
+}
+
+// renderUpdateAssetForm pomaga renderować komponent UpdateAssetForm
+func (h *AppHandler) renderUpdateAssetForm(w http.ResponseWriter, asset models.Asset, message string) {
+	err := views.UpdateAssetForm(asset, message).Render(context.Background(), w)
+	if err != nil {
+		http.Error(w, "Error rendering update asset form", http.StatusInternalServerError)
+		log.Printf("Error rendering update asset form: %v", err)
+		return
+	}
+}

@@ -50,6 +50,8 @@ func main() {
 
 	http.HandleFunc("/delete-asset", mainHandler.DeleteAssetHandler)
 
+	http.HandleFunc("/update-asset", mainHandler.UpdateAssetHandler)
+
 	// Ustawienie handlera dla statycznych plików
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
