@@ -101,3 +101,40 @@ func (r *PortfolioRepo) LoadPortfolio(ctx context.Context) (*models.InvestmentPo
 	}
 	return &portfolio, nil
 }
+
+// RemoveAsset usuwa aktywo o podanym ID z portfela w bazie danych.
+func (r *PortfolioRepo) RemoveAsset(ctx context.Context, assetID string) error {
+	// 1. Załaduj aktualny portfel
+	portfolio, err := r.LoadPortfolio(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load portfolio for asset removal: %w", err)
+	}
+
+	// 2. Znajdź i usuń aktywo z tablicy w pamięci
+	found := false
+	var updatedAssets []models.Asset
+	for _, asset := range portfolio.Assets {
+		if asset.ID == assetID {
+			found = true
+			log.Printf("Found asset to remove: %s", asset.Name)
+		} else {
+			updatedAssets = append(updatedAssets, asset)
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("asset with ID %s not found in portfolio", assetID)
+	}
+
+	portfolio.Assets = updatedAssets
+	portfolio.CalculateTotals() // Przelicz wartości portfela po usunięciu
+
+	// 3. Zapisz zaktualizowany portfel z powrotem do bazy danych
+	// Używamy SavePortfolio, które jest upsertem i zaktualizuje cały dokument portfela.
+	if err := r.SavePortfolio(ctx, portfolio); err != nil {
+		return fmt.Errorf("failed to save portfolio after asset removal: %w", err)
+	}
+
+	log.Printf("Asset with ID %s successfully removed from portfolio.", assetID)
+	return nil
+}

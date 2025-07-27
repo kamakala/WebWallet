@@ -9,13 +9,13 @@ import (
 
 // Asset reprezentuje pojedynczy składnik majątku w portfelu inwestycyjnym.
 type Asset struct {
-	ID       string  // Unikalny identyfikator aktywa
-	Name     string  // Nazwa aktywa (np. "Apple Inc.", "S&P 500 ETF", "Obligacje Skarbowe")
-	Symbol   string  // Symbol giełdowy (jeśli dotyczy, np. AAPL, SPY)
-	Type     string  // Typ aktywa (np. "Akcje", "ETF", "Obligacje", "Gotówka")
-	Quantity float64 // Ilość posiadanych jednostek (np. liczba akcji, kwota gotówki)
-	AvgCost  float64 // Średnia cena zakupu za jednostkę (ważne dla zysków/strat)
-	// Możesz dodać więcej pól, np. LastPrice, Currency, ISIN, MaturityDate dla obligacji
+	ID       string  `json:"id" bson:"_id"` // Dodaj tag bson:"_id"
+	Name     string  `json:"name" bson:"name"`
+	Symbol   string  `json:"symbol" bson:"symbol"`
+	Type     string  `json:"type" bson:"type"`
+	Quantity float64 `json:"quantity" bson:"quantity"`
+	AvgCost  float64 `json:"avgCost" bson:"avgCost"`
+	// CurrentPrice float64 `json:"currentPrice" bson:"currentPrice"` // To pole na razie jest równe AvgCost
 }
 
 // Subscription reprezentuje pojedynczą subskrypcję.
@@ -55,18 +55,18 @@ func (p *InvestmentPortfolio) AddAsset(a Asset) {
 	// W przyszłości będziemy pobierać aktualne ceny rynkowe.
 	p.TotalValue += a.Quantity * a.AvgCost // Uproszczone obliczenie wartości na podstawie średniego kosztu
 	p.TotalCost += a.Quantity * a.AvgCost
-	p.calculateTotals() // Przelicz wszystko po dodaniu
+	p.CalculateTotals() // Przelicz wszystko po dodaniu
 }
 
 // AddSubscription dodaje nową subskrypcję do portfela.
 func (p *InvestmentPortfolio) AddSubscription(s Subscription) {
 	p.Subscriptions = append(p.Subscriptions, s)
-	p.calculateTotals() // Przelicz wszystko po dodaniu
+	p.CalculateTotals() // Przelicz wszystko po dodaniu
 }
 
-// calculateTotals przelicza sumaryczne wartości portfela.
+// CalculateTotals przelicza sumaryczne wartości portfela.
 // POWINNO BYĆ WYWOŁYWANE PO KAŻDEJ ZMIANIE W ASSETACH LUB SUBSKRYPCJACH
-func (p *InvestmentPortfolio) calculateTotals() {
+func (p *InvestmentPortfolio) CalculateTotals() {
 	p.TotalValue = 0.0
 	p.TotalCost = 0.0
 	p.MonthlySubscriptionCost = 0.0
@@ -100,19 +100,19 @@ func (p *InvestmentPortfolio) GetSubscriptions() []Subscription {
 
 // GetTotalValue zwraca całkowitą wartość portfela.
 func (p *InvestmentPortfolio) GetTotalValue() float64 {
-	p.calculateTotals() // Upewniamy się, że wartości są aktualne przed zwróceniem
+	p.CalculateTotals() // Upewniamy się, że wartości są aktualne przed zwróceniem
 	return p.TotalValue
 }
 
 // GetTotalCost zwraca całkowity koszt zakupu aktywów.
 func (p *InvestmentPortfolio) GetTotalCost() float64 {
-	p.calculateTotals()
+	p.CalculateTotals()
 	return p.TotalCost
 }
 
 // GetMonthlySubscriptionCost zwraca łączny miesięczny koszt subskrypcji.
 func (p *InvestmentPortfolio) GetMonthlySubscriptionCost() float64 {
-	p.calculateTotals()
+	p.CalculateTotals()
 	return p.MonthlySubscriptionCost
 }
 

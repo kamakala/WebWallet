@@ -49,6 +49,7 @@ templ Home(
 					<th>Ilość</th>
 					<th>Śr. Koszt</th>
 					<th>Wartość</th>
+					<th>Akcje</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -60,6 +61,12 @@ templ Home(
 						<td>{ fmt.Sprintf("%.2f", asset.Quantity) }</td>
 						<td>{ fmt.Sprintf("%.2f PLN", asset.AvgCost) }</td>
 						<td>{ fmt.Sprintf("%.2f PLN", asset.Quantity * asset.AvgCost) }</td> // Uproszczone obliczenie wartości
+						<td>
+							<form action={ fmt.Sprintf("/delete-asset?id=%s", asset.ID) } method="POST" onsubmit="return confirm('Czy na pewno chcesz usunąć to aktywo?');">
+								<button type="submit" class="delete-button">Usuń</button>
+							</form>
+						</td>
+					
 					</tr>
 				}
 			</tbody>

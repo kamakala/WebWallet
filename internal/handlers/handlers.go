@@ -192,3 +192,31 @@ func (h *AppHandler) renderAddAssetForm(w http.ResponseWriter, message string) {
 		return
 	}
 }
+
+// DeleteAssetHandler usuwa aktywo z portfela.
+func (h *AppHandler) DeleteAssetHandler(w http.ResponseWriter, r *http.Request) {
+	// Sprawdź, czy żądanie jest metodą POST (dla bezpieczeństwa i dobrych praktyk)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Metoda niedozwolona", http.StatusMethodNotAllowed)
+		return
+	}
+
+	assetID := r.URL.Query().Get("id") // Pobieramy ID aktywa z parametru zapytania URL
+	if assetID == "" {
+		http.Error(w, "Brak identyfikatora aktywa", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	err := h.portfolioRepo.RemoveAsset(ctx, assetID)
+	if err != nil {
+		log.Printf("Błąd usuwania aktywa (ID: %s): %v", assetID, err)
+		http.Error(w, fmt.Sprintf("Nie udało się usunąć aktywa: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Aktywo o ID %s usunięte pomyślnie.", assetID)
+	http.Redirect(w, r, "/", http.StatusSeeOther) // Przekieruj z powrotem na stronę główną
+}

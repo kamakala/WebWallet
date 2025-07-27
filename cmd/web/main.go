@@ -48,6 +48,8 @@ func main() {
 
 	http.HandleFunc("/add-asset", mainHandler.AddAssetHandler) // Rejestracja dla GET i POST
 
+	http.HandleFunc("/delete-asset", mainHandler.DeleteAssetHandler)
+
 	// Ustawienie handlera dla statycznych plików
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
