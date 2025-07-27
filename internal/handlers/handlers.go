@@ -358,3 +358,258 @@ func (h *AppHandler) renderUpdateAssetForm(w http.ResponseWriter, asset models.A
 		return
 	}
 }
+
+// AddSubscriptionHandler obsługuje dodawanie nowych subskrypcji.
+func (h *AppHandler) AddSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var message string
+
+	if r.Method == http.MethodPost {
+		err := r.ParseForm()
+		if err != nil {
+			message = fmt.Sprintf("Błąd parsowania formularza: %v", err)
+			log.Printf("Error parsing add subscription form: %v", err)
+			h.renderAddSubscriptionForm(w, message)
+			return
+		}
+
+		name := r.FormValue("name")
+		costStr := r.FormValue("cost")
+		frequency := r.FormValue("frequency")
+		nextDueStr := r.FormValue("nextDue")
+
+		cost, err := strconv.ParseFloat(costStr, 64)
+		if err != nil {
+			message = "Nieprawidłowa wartość 'Koszt'."
+			h.renderAddSubscriptionForm(w, message)
+			return
+		}
+
+		nextDue, err := time.Parse("2006-01-02", nextDueStr)
+		if err != nil {
+			message = "Nieprawidłowy format daty 'Następna Płatność'. Użyj YYYY-MM-DD."
+			h.renderAddSubscriptionForm(w, message)
+			return
+		}
+
+		newSub := models.Subscription{
+			ID:        models.GenerateID(),
+			Name:      name,
+			Cost:      cost,
+			Frequency: frequency,
+			NextDue:   nextDue,
+		}
+
+		portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
+		if err != nil {
+			message = fmt.Sprintf("Błąd ładowania portfela: %v", err)
+			log.Printf("Error loading portfolio for subscription addition: %v", err)
+			h.renderAddSubscriptionForm(w, message)
+			return
+		}
+
+		portfolio.AddSubscription(newSub)
+
+		if err := h.portfolioRepo.SavePortfolio(ctx, portfolio); err != nil {
+			message = fmt.Sprintf("Błąd zapisu portfela: %v", err)
+			log.Printf("Error saving portfolio after subscription addition: %v", err)
+			h.renderAddSubscriptionForm(w, message)
+			return
+		}
+
+		log.Printf("Subscription added: %+v", newSub)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	h.renderAddSubscriptionForm(w, "")
+}
+
+// renderAddSubscriptionForm pomaga renderować komponent AddSubscriptionForm
+func (h *AppHandler) renderAddSubscriptionForm(w http.ResponseWriter, message string) {
+	err := views.AddSubscriptionForm(message).Render(context.Background(), w)
+	if err != nil {
+		http.Error(w, "Error rendering add subscription form", http.StatusInternalServerError)
+		log.Printf("Error rendering add subscription form: %v", err)
+		return
+	}
+}
+
+// DeleteSubscriptionHandler usuwa subskrypcję z portfela.
+func (h *AppHandler) DeleteSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Metoda niedozwolona", http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		log.Printf("Błąd parsowania formularza POST dla usuwania subskrypcji: %v", err)
+		http.Error(w, "Błąd wewnętrzny serwera", http.StatusInternalServerError)
+		return
+	}
+
+	subID := r.FormValue("sub_id")
+	if subID == "" {
+		http.Error(w, "Brak identyfikatora subskrypcji w formularzu.", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	err = h.portfolioRepo.RemoveSubscription(ctx, subID)
+	if err != nil {
+		log.Printf("Błąd usuwania subskrypcji (ID: %s): %v", subID, err)
+		http.Error(w, fmt.Sprintf("Nie udało się usunąć subskrypcji: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Subskrypcja o ID %s usunięta pomyślnie.", subID)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// UpdateSubscriptionHandler obsługuje aktualizację istniejących subskrypcji.
+func (h *AppHandler) UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var message string
+	var targetSub models.Subscription // Subskrypcja, którą będziemy aktualizować/wyświetlać
+
+	if r.Method == http.MethodPost {
+		// --- Obsługa żądania POST (przetwarzanie formularza) ---
+		err := r.ParseForm()
+		if err != nil {
+			message = fmt.Sprintf("Błąd parsowania formularza: %v", err)
+			log.Printf("Error parsing update subscription form: %v", err)
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, s := range portfolio.Subscriptions {
+					if s.ID == r.FormValue("sub_id") {
+						targetSub = s
+						break
+					}
+				}
+			}
+			h.renderUpdateSubscriptionForm(w, targetSub, message)
+			return
+		}
+
+		subID := r.FormValue("sub_id")
+		name := r.FormValue("name")
+		costStr := r.FormValue("cost")
+		frequency := r.FormValue("frequency")
+		nextDueStr := r.FormValue("nextDue")
+
+		if subID == "" {
+			message = "Brak identyfikatora subskrypcji do aktualizacji."
+			h.renderUpdateSubscriptionForm(w, targetSub, message)
+			return
+		}
+
+		cost, err := strconv.ParseFloat(costStr, 64)
+		if err != nil || cost < 0 {
+			message = "Nieprawidłowa wartość 'Koszt'. Musi być liczbą nieujemną."
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, s := range portfolio.Subscriptions {
+					if s.ID == subID {
+						targetSub = s
+						break
+					}
+				}
+			}
+			h.renderUpdateSubscriptionForm(w, targetSub, message)
+			return
+		}
+
+		nextDue, err := time.Parse("2006-01-02", nextDueStr)
+		if err != nil {
+			message = "Nieprawidłowy format daty 'Następna Płatność'. Użyj YYYY-MM-DD."
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, s := range portfolio.Subscriptions {
+					if s.ID == subID {
+						targetSub = s
+						break
+					}
+				}
+			}
+			h.renderUpdateSubscriptionForm(w, targetSub, message)
+			return
+		}
+
+		updatedSub := models.Subscription{
+			ID:        subID, // Używamy istniejącego ID
+			Name:      name,
+			Cost:      cost,
+			Frequency: frequency,
+			NextDue:   nextDue,
+		}
+
+		err = h.portfolioRepo.UpdateSubscription(ctx, updatedSub)
+		if err != nil {
+			message = fmt.Sprintf("Błąd aktualizacji subskrypcji: %v", err)
+			log.Printf("Error updating subscription (ID: %s): %v", subID, err)
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, s := range portfolio.Subscriptions {
+					if s.ID == subID {
+						targetSub = s
+						break
+					}
+				}
+			}
+			h.renderUpdateSubscriptionForm(w, targetSub, message)
+			return
+		}
+
+		log.Printf("Subskrypcja o ID %s zaktualizowana pomyślnie.", subID)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+
+	} else {
+		// --- Obsługa żądania GET (wyświetlanie formularza) ---
+		subID := r.URL.Query().Get("id")
+		if subID == "" {
+			http.Error(w, "Brak identyfikatora subskrypcji do aktualizacji.", http.StatusBadRequest)
+			return
+		}
+
+		portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
+		if err != nil {
+			http.Error(w, "Nie udało się załadować portfela.", http.StatusInternalServerError)
+			log.Printf("Error loading portfolio for update subscription form: %v", err)
+			return
+		}
+
+		found := false
+		for _, sub := range portfolio.Subscriptions {
+			if sub.ID == subID {
+				targetSub = sub
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			http.Error(w, "Subskrypcja nie znaleziona.", http.StatusNotFound)
+			return
+		}
+
+		h.renderUpdateSubscriptionForm(w, targetSub, "")
+	}
+}
+
+// renderUpdateSubscriptionForm pomaga renderować komponent UpdateSubscriptionForm
+func (h *AppHandler) renderUpdateSubscriptionForm(w http.ResponseWriter, sub models.Subscription, message string) {
+	err := views.UpdateSubscriptionForm(sub, message).Render(context.Background(), w)
+	if err != nil {
+		http.Error(w, "Error rendering update subscription form", http.StatusInternalServerError)
+		log.Printf("Error rendering update subscription form: %v", err)
+		return
+	}
+}

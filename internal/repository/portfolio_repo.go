@@ -190,3 +190,67 @@ func (r *PortfolioRepo) UpdateAsset(ctx context.Context, assetID string, additio
 
 	return nil
 }
+
+// RemoveSubscription usuwa subskrypcję o podanym ID z portfela w bazie danych.
+func (r *PortfolioRepo) RemoveSubscription(ctx context.Context, subID string) error {
+	portfolio, err := r.LoadPortfolio(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load portfolio for subscription removal: %w", err)
+	}
+
+	found := false
+	var updatedSubscriptions []models.Subscription
+	for _, sub := range portfolio.Subscriptions {
+		if sub.ID == subID {
+			found = true
+			log.Printf("Found subscription to remove: %s", sub.Name)
+		} else {
+			updatedSubscriptions = append(updatedSubscriptions, sub)
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("subscription with ID %s not found in portfolio", subID)
+	}
+
+	portfolio.Subscriptions = updatedSubscriptions
+	portfolio.CalculateTotals() // Przelicz wartości portfela po usunięciu
+
+	if err := r.SavePortfolio(ctx, portfolio); err != nil {
+		return fmt.Errorf("failed to save portfolio after subscription removal: %w", err)
+	}
+
+	log.Printf("Subscription with ID %s successfully removed from portfolio.", subID)
+	return nil
+}
+
+// UpdateSubscription aktualizuje subskrypcję o podanym ID.
+func (r *PortfolioRepo) UpdateSubscription(ctx context.Context, updatedSub models.Subscription) error {
+	portfolio, err := r.LoadPortfolio(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load portfolio for subscription update: %w", err)
+	}
+
+	found := false
+	for i, sub := range portfolio.Subscriptions {
+		if sub.ID == updatedSub.ID {
+			// Zastąp starą subskrypcję nową
+			portfolio.Subscriptions[i] = updatedSub
+			found = true
+			log.Printf("Subscription %s updated.", updatedSub.Name)
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("subscription with ID %s not found in portfolio for update", updatedSub.ID)
+	}
+
+	portfolio.CalculateTotals() // Przelicz wartości portfela po aktualizacji
+
+	if err := r.SavePortfolio(ctx, portfolio); err != nil {
+		return fmt.Errorf("failed to save portfolio after subscription update: %w", err)
+	}
+
+	return nil
+}

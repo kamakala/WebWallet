@@ -18,13 +18,13 @@ type Asset struct {
 	// CurrentPrice float64 `json:"currentPrice" bson:"currentPrice"` // To pole na razie jest równe AvgCost
 }
 
-// Subscription reprezentuje pojedynczą subskrypcję.
+// Subscription reprezentuje pojedynczą subskrypcję lub stały koszt.
 type Subscription struct {
-	ID        string    // Unikalny identyfikator subskrypcji
-	Name      string    // Nazwa usługi (np. "Netflix", "Spotify", "Bloomberg Terminal")
-	Cost      float64   // Koszt subskrypcji
-	Frequency string    // Częstotliwość opłat (np. "Miesięcznie", "Rocznie")
-	NextDue   time.Time // Następna data płatności
+	ID        string    `json:"id" bson:"_id"` // Dodaj tag bson:"_id"
+	Name      string    `json:"name" bson:"name"`
+	Cost      float64   `json:"cost" bson:"cost"`
+	Frequency string    `json:"frequency" bson:"frequency"` // np. "Miesięcznie", "Rocznie"
+	NextDue   time.Time `json:"nextDue" bson:"nextDue"`     // Następna data płatności
 }
 
 // InvestmentPortfolio reprezentuje cały portfel inwestycyjny użytkownika.

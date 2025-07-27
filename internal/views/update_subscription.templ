@@ -1,0 +1,46 @@
+// internal/views/update_subscription.templ
+package views
+
+import "fmt"
+import "webwallet/internal/models"
+
+// UpdateSubscriptionForm przyjmuje dane subskrypcji i komunikat.
+templ UpdateSubscriptionForm(subscription models.Subscription, message string) {
+	@Layout("Aktualizuj Subskrypcję", RenderUpdateSubscriptionContent(subscription, message), &models.InvestmentPortfolio{}, "", "", "", 0, 0)
+}
+
+// RenderUpdateSubscriptionContent renderuje samą zawartość formularza aktualizacji subskrypcji.
+templ RenderUpdateSubscriptionContent(subscription models.Subscription, message string) {
+    <div class="form-container">
+        <h2>Aktualizuj Subskrypcję: { subscription.Name }</h2>
+        <p>Obecny koszt: { fmt.Sprintf("%.2f PLN", subscription.Cost) }</p>
+        <p>Obecna częstotliwość: { subscription.Frequency }</p>
+        <p>Następna płatność: { subscription.NextDue.Format("2006-01-02") }</p>
+
+        if message != "" {
+            <p class="message">{ message }</p>
+        }
+
+        <form action="/update-subscription" method="POST">
+            <input type="hidden" name="sub_id" value={ subscription.ID }/>
+            <div class="form-group">
+                <label for="name">Nazwa Subskrypcji:</label>
+                <input type="text" id="name" name="name" value={ subscription.Name } required/>
+            </div>
+            <div class="form-group">
+                <label for="cost">Koszt:</label>
+                <input type="number" id="cost" name="cost" step="0.01" min="0" value={ fmt.Sprintf("%.2f", subscription.Cost) } required/>
+            </div>
+            <div class="form-group">
+                <label for="frequency">Częstotliwość (np. Miesięcznie, Rocznie):</label>
+                <input type="text" id="frequency" name="frequency" value={ subscription.Frequency } required/>
+            </div>
+            <div class="form-group">
+                <label for="nextDue">Następna Data Płatności (YYYY-MM-DD):</label>
+                <input type="date" id="nextDue" name="nextDue" value={ subscription.NextDue.Format("2006-01-02") } required/>
+            </div>
+            <button type="submit">Aktualizuj Subskrypcję</button>
+        </form>
+        <p><a href="/">Powrót do portfela</a></p>
+    </div>
+}

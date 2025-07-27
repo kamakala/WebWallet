@@ -17,6 +17,7 @@ templ Home(
 	<h2>Witaj w Twoim Portfelu Inwestycyjnym!</h2>
 	<p>{ content }</p>
     <p><a href="/add-asset">Dodaj nowe aktywo</a></p> // DODANY LINK
+	<p><a href="/add-subscription">Dodaj nową subskrypcję</a></p>
 	<div class="summary-cards">
 		<div class="card">
 			<h3>Łączna Wartość Portfela</h3>
@@ -85,6 +86,7 @@ templ Home(
 					<th>Koszt</th>
 					<th>Częstotliwość</th>
 					<th>Następna Płatność</th>
+					<th>Akcje</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -94,6 +96,15 @@ templ Home(
 						<td>{ fmt.Sprintf("%.2f PLN", sub.Cost) }</td>
 						<td>{ sub.Frequency }</td>
 						<td>{ sub.NextDue.Format("2006-01-02") }</td>
+						<td> 
+							<div class="subscription-actions">
+								<a href={ fmt.Sprintf("/update-subscription?id=%s", sub.ID) } class="update-button">Edytuj</a>
+								<form action="/delete-subscription" method="POST" onsubmit="return confirm('Czy na pewno chcesz usunąć tę subskrypcję?');">
+									<input type="hidden" name="sub_id" value={ sub.ID }/>
+									<button type="submit" class="delete-button">Usuń</button>
+								</form>
+							</div>
+						</td>
 					</tr>
 				}
 			</tbody>

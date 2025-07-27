@@ -1,0 +1,41 @@
+// internal/views/add_subscription.templ
+package views
+
+import "webwallet/internal/models" // Potrzebne, bo Layout oczekuje danych portfolio
+
+// AddSubscriptionForm przyjmuje komunikat o błędzie lub sukcesie.
+templ AddSubscriptionForm(message string) {
+	@Layout("Dodaj Nową Subskrypcję", RenderAddSubscriptionContent(message), &models.InvestmentPortfolio{}, "", "", "", 0, 0)
+}
+
+// RenderAddSubscriptionContent renderuje samą zawartość formularza dodawania subskrypcji.
+templ RenderAddSubscriptionContent(message string) {
+    <div class="form-container">
+        <h2>Dodaj Nową Subskrypcję</h2>
+
+        if message != "" {
+            <p class="message">{ message }</p>
+        }
+
+        <form action="/add-subscription" method="POST">
+            <div class="form-group">
+                <label for="name">Nazwa Subskrypcji:</label>
+                <input type="text" id="name" name="name" required/>
+            </div>
+            <div class="form-group">
+                <label for="cost">Koszt:</label>
+                <input type="number" id="cost" name="cost" step="0.01" min="0" required/>
+            </div>
+            <div class="form-group">
+                <label for="frequency">Częstotliwość (np. Miesięcznie, Rocznie):</label>
+                <input type="text" id="frequency" name="frequency" required/>
+            </div>
+            <div class="form-group">
+                <label for="nextDue">Następna Data Płatności (YYYY-MM-DD):</label>
+                <input type="date" id="nextDue" name="nextDue" required/>
+            </div>
+            <button type="submit">Dodaj Subskrypcję</button>
+        </form>
+        <p><a href="/">Powrót do portfela</a></p>
+    </div>
+}
