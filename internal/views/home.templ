@@ -15,9 +15,8 @@ templ Home(
     profitLossPercentage float64,
 ) {
 	<h2>Witaj w Twoim Portfelu Inwestycyjnym!</h2>
+	//<p></p>
 	<p>{ content }</p>
-    <p><a href="/add-asset">Dodaj nowe aktywo</a></p> // DODANY LINK
-	<p><a href="/add-subscription">Dodaj nową subskrypcję</a></p>
 	<div class="summary-cards">
 		<div class="card">
 			<h3>Łączna Wartość Portfela</h3>
@@ -48,8 +47,9 @@ templ Home(
 					<th>Symbol</th>
 					<th>Typ</th>
 					<th>Ilość</th>
-					<th>Śr. Koszt</th>
+					<th>Śr. Koszt zakupu</th>
 					<th>Wartość</th>
+					<th>Wartość Całkowita</th>
 					<th>Akcje</th>
 				</tr>
 			</thead>
@@ -61,9 +61,11 @@ templ Home(
 						<td>{ asset.Type }</td>
 						<td>{ fmt.Sprintf("%.2f", asset.Quantity) }</td>
 						<td>{ fmt.Sprintf("%.2f PLN", asset.AvgCost) }</td>
-						<td>{ fmt.Sprintf("%.2f PLN", asset.Quantity * asset.AvgCost) }</td> // Uproszczone obliczenie wartości
+						<td>{ fmt.Sprintf("%.2f PLN", asset.CurrentPrice) }</td>
+						<td>{ fmt.Sprintf("%.2f PLN", asset.Quantity * asset.CurrentPrice) }</td>
 						<td>
-							<a href={ fmt.Sprintf("/update-asset?id=%s", asset.ID) } class="update-button">Dodaj Ilość</a>
+							<a href={ fmt.Sprintf("/update-asset?id=%s", asset.ID) } class="update-button">Dodaj Ilość</a><br>
+							<a href={ fmt.Sprintf("/update-price?id=%s", asset.ID) } class="update-button">Aktualizuj Wartość</a>
 							<form action={ fmt.Sprintf("/delete-asset?id=%s", asset.ID) } method="POST" onsubmit="return confirm('Czy na pewno chcesz usunąć to aktywo?');">
 								<button type="submit" class="delete-button">Usuń</button>
 							</form>
@@ -73,8 +75,11 @@ templ Home(
 				}
 			</tbody>
 		</table>
+		<p><a href="/add-asset">Dodaj nowe aktywo</a></p>
 	} else {
 		<p>Brak aktywów w portfelu.</p>
+		<p><a href="/add-asset">Dodaj nowe aktywo</a></p>
+
 	}
 
 	<h3>Twoje Subskrypcje:</h3>
@@ -108,8 +113,12 @@ templ Home(
 					</tr>
 				}
 			</tbody>
-		</table>
+		</table><br>
+        <p><a href="/add-subscription">Dodaj nową subskrypcję</a></p> // DODANY LINK
+   
 	} else {
 		<p>Brak subskrypcji.</p>
+        <p><a href="/add-subscription">Dodaj nową subskrypcję</a></p> // DODANY LINK
+
 	}
 }

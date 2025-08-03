@@ -51,7 +51,7 @@ func main() {
 	http.HandleFunc("/delete-asset", mainHandler.DeleteAssetHandler)
 
 	http.HandleFunc("/update-asset", mainHandler.UpdateAssetHandler)
-
+	http.HandleFunc("/update-price", mainHandler.UpdateAssetPriceHandler)
 	http.HandleFunc("/add-subscription", mainHandler.AddSubscriptionHandler)
 	http.HandleFunc("/delete-subscription", mainHandler.DeleteSubscriptionHandler)
 	http.HandleFunc("/update-subscription", mainHandler.UpdateSubscriptionHandler)

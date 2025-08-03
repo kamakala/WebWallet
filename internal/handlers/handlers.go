@@ -613,3 +613,111 @@ func (h *AppHandler) renderUpdateSubscriptionForm(w http.ResponseWriter, sub mod
 		return
 	}
 }
+
+// UpdateAssetPriceHandler obsługuje aktualizację ceny bieżącej aktywa.
+func (h *AppHandler) UpdateAssetPriceHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var message string           // Komunikat dla użytkownika
+	var targetAsset models.Asset // Aktywo, które będziemy aktualizować/wyświetlać
+
+	if r.Method == http.MethodPost {
+		// --- Obsługa żądania POST (przetwarzanie formularza) ---
+		err := r.ParseForm()
+		if err != nil {
+			message = fmt.Sprintf("Błąd parsowania formularza: %v", err)
+			log.Printf("Error parsing update asset form: %v", err)
+			// Spróbuj załadować aktywo, żeby formularz nie był pusty
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, a := range portfolio.Assets {
+					if a.ID == r.FormValue("asset_id") {
+						targetAsset = a
+						break
+					}
+				}
+			}
+			h.renderUpdatePriceForm(w, targetAsset, message)
+			return
+		}
+
+		assetID := r.FormValue("asset_id")
+		priceStr := r.FormValue("currentPrice")
+		newPrice, err := strconv.ParseFloat(priceStr, 64)
+		if err != nil || newPrice < 0 {
+			// Render form again with error
+			message := "Nieprawidłowa wartość 'Nowa Cena'. Musi być liczbą nieujemną."
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, a := range portfolio.Assets {
+					if a.ID == assetID {
+						targetAsset = a
+						break
+					}
+				}
+			}
+			h.renderUpdatePriceForm(w, targetAsset, message)
+			return
+		}
+
+		err = h.portfolioRepo.UpdateAssetCurrentPrice(ctx, assetID, newPrice)
+		if err != nil {
+			log.Printf("Błąd aktualizacji ceny aktywa (ID: %s): %v", assetID, err)
+			message := fmt.Sprintf("Nie udało się zaktualizować ceny: %v", err)
+			h.renderUpdatePriceForm(w, targetAsset, message)
+			return
+		}
+
+		log.Printf("Cena aktywa o ID %s zaktualizowana pomyślnie.", assetID)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	} else {
+		// --- Obsługa żądania GET (wyświetlanie formularza) ---
+		assetID := r.URL.Query().Get("id")
+		if assetID == "" {
+			http.Error(w, "Brak identyfikatora aktywa do aktualizacji.", http.StatusBadRequest)
+			return
+		}
+
+		portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
+		if err != nil {
+			http.Error(w, "Nie udało się załadować portfela.", http.StatusInternalServerError)
+			log.Printf("Error loading portfolio for update asset form: %v", err)
+			return
+		}
+
+		found := false
+		for _, asset := range portfolio.Assets {
+			if asset.ID == assetID {
+				targetAsset = asset
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			http.Error(w, "Aktywo nie znalezione.", http.StatusNotFound)
+			return
+		}
+
+		h.renderUpdatePriceForm(w, targetAsset, "")
+	}
+
+}
+
+// renderUpdatePriceForm pomaga renderować komponent formularza aktualizacji ceny.
+// (You will need to create a corresponding `views.UpdatePriceForm` component)
+func (h *AppHandler) renderUpdatePriceForm(w http.ResponseWriter, asset models.Asset, message string) {
+	// This assumes you create a new view: `views.UpdatePriceForm(asset, message)`
+	// For now, let's log it. You would need to create `update_price.templ`.
+	log.Printf("Rendering update price form for asset: %s", asset.Name)
+	//Example of what the call would look like:
+	err := views.UpdatePriceForm(asset, message).Render(context.Background(), w)
+	if err != nil {
+		http.Error(w, "Error rendering update price form", http.StatusInternalServerError)
+	}
+
+	// Placeholder until the view is created
+	//fmt.Fprintf(w, "<h1>Update Price for %s</h1><p>%s</p><form method='POST'><label>New Price:</label><input type='text' name='currentPrice' value='%.2f'><button type='submit'>Update</button></form>", asset.Name, message, asset.CurrentPrice)
+}

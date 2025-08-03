@@ -1,0 +1,32 @@
+// internal/views/update_asset.templ
+package views
+
+import "fmt"
+import "webwallet/internal/models"
+
+// UpdateAssetForm przyjmuje dane aktywa do wyświetlenia i komunikat.
+templ UpdatePriceForm(asset models.Asset, message string) {
+	@Layout("Aktualizuj Aktywo", RenderUpdatePriceContent(asset, message), &models.InvestmentPortfolio{}, "", "", "", 0, 0)
+}
+
+// RenderUpdateAssetContent to pomocniczy komponent renderujący samą zawartość formularza.
+templ RenderUpdatePriceContent(asset models.Asset, message string) {
+    <div class="form-container">
+        <h2>Aktualizuj Aktywo: { asset.Name } ({ asset.Symbol })</h2>
+        <p>Obecna cena: { fmt.Sprintf("%.2f", asset.CurrentPrice) }</p>
+
+        if message != "" {
+            <p class="message">{ message }</p>
+        }
+
+        <form action="/update-price" method="POST">
+            <input type="hidden" name="asset_id" value={ asset.ID }/>
+            <div class="form-group">
+                <label for="newCurrentPrice">Nowa Cena:</label>
+                <input type="number" id="newCurrentPrice" name="currentPrice" step="0.01" min="0" required/>
+            </div>
+            <button type="submit">Aktualizuj Aktywo</button>
+        </form>
+        <p><a href="/">Powrót do portfela</a></p>
+    </div>
+}

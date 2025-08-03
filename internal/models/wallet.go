@@ -9,13 +9,13 @@ import (
 
 // Asset reprezentuje pojedynczy składnik majątku w portfelu inwestycyjnym.
 type Asset struct {
-	ID       string  `json:"id" bson:"_id"` // Dodaj tag bson:"_id"
-	Name     string  `json:"name" bson:"name"`
-	Symbol   string  `json:"symbol" bson:"symbol"`
-	Type     string  `json:"type" bson:"type"`
-	Quantity float64 `json:"quantity" bson:"quantity"`
-	AvgCost  float64 `json:"avgCost" bson:"avgCost"`
-	// CurrentPrice float64 `json:"currentPrice" bson:"currentPrice"` // To pole na razie jest równe AvgCost
+	ID           string  `json:"id" bson:"_id"` // Dodaj tag bson:"_id"
+	Name         string  `json:"name" bson:"name"`
+	Symbol       string  `json:"symbol" bson:"symbol"`
+	Type         string  `json:"type" bson:"type"`
+	Quantity     float64 `json:"quantity" bson:"quantity"`
+	AvgCost      float64 `json:"avgCost" bson:"avgCost"`
+	CurrentPrice float64 `json:"currentPrice" bson:"currentPrice"`
 }
 
 // Subscription reprezentuje pojedynczą subskrypcję lub stały koszt.
@@ -53,7 +53,10 @@ func (p *InvestmentPortfolio) AddAsset(a Asset) {
 	p.Assets = append(p.Assets, a)
 	// Na razie TotalValue będzie po prostu sumą (Quantity * AvgCost).
 	// W przyszłości będziemy pobierać aktualne ceny rynkowe.
-	p.TotalValue += a.Quantity * a.AvgCost // Uproszczone obliczenie wartości na podstawie średniego kosztu
+	if a.CurrentPrice == 0 {
+		a.CurrentPrice = a.AvgCost
+	}
+	p.TotalValue += a.Quantity * a.CurrentPrice // Uproszczone obliczenie wartości na podstawie średniego kosztu
 	p.TotalCost += a.Quantity * a.AvgCost
 	p.CalculateTotals() // Przelicz wszystko po dodaniu
 }
@@ -73,7 +76,7 @@ func (p *InvestmentPortfolio) CalculateTotals() {
 
 	for _, a := range p.Assets {
 		// Dla uproszczenia, wartość to ilość * średni koszt. W przyszłości będzie to ilość * cena rynkowa.
-		p.TotalValue += a.Quantity * a.AvgCost
+		p.TotalValue += a.Quantity * a.CurrentPrice
 		p.TotalCost += a.Quantity * a.AvgCost
 	}
 

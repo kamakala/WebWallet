@@ -191,6 +191,36 @@ func (r *PortfolioRepo) UpdateAsset(ctx context.Context, assetID string, additio
 	return nil
 }
 
+// UpdateAssetCurrentPrice aktualizuje cenę bieżącą dla danego aktywa.
+func (r *PortfolioRepo) UpdateAssetCurrentPrice(ctx context.Context, assetID string, newPrice float64) error {
+	// The filter to find the main portfolio document.
+	filter := bson.M{"_id": "main_portfolio"}
+
+	// The filter to identify the specific asset within the 'assets' array.
+	// and the update operation to set the new 'currentPrice'.
+	update := bson.M{
+		"$set": bson.M{"assets.$[elem].currentPrice": newPrice},
+	}
+
+	// arrayFilters specifies the condition to find the correct element in the array.
+	// In this case, it finds the asset with the matching _id.
+	opts := options.Update().SetArrayFilters(options.ArrayFilters{
+		Filters: []interface{}{bson.M{"elem._id": assetID}},
+	})
+
+	result, err := r.collection.UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		return fmt.Errorf("failed to update asset price in db: %w", err)
+	}
+
+	if result.ModifiedCount == 0 {
+		return fmt.Errorf("asset with ID %s not found or price is already the same", assetID)
+	}
+
+	log.Printf("Successfully updated current price for asset ID %s", assetID)
+	return nil
+}
+
 // RemoveSubscription usuwa subskrypcję o podanym ID z portfela w bazie danych.
 func (r *PortfolioRepo) RemoveSubscription(ctx context.Context, subID string) error {
 	portfolio, err := r.LoadPortfolio(ctx)
