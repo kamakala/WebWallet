@@ -221,6 +221,36 @@ func (r *PortfolioRepo) UpdateAssetCurrentPrice(ctx context.Context, assetID str
 	return nil
 }
 
+// UpdateAssetWalletType aktualizuje przypisanie do danego typu portfela dla danego aktywa.
+func (r *PortfolioRepo) UpdateAssetWalletType(ctx context.Context, assetID string, newWalletType string) error {
+	// The filter to find the main portfolio document.
+	filter := bson.M{"_id": "main_portfolio"}
+
+	// The filter to identify the specific asset within the 'assets' array.
+	// and the update operation to set the new 'currentPrice'.
+	update := bson.M{
+		"$set": bson.M{"assets.$[elem].walletType": newWalletType},
+	}
+
+	// arrayFilters specifies the condition to find the correct element in the array.
+	// In this case, it finds the asset with the matching _id.
+	opts := options.Update().SetArrayFilters(options.ArrayFilters{
+		Filters: []interface{}{bson.M{"elem._id": assetID}},
+	})
+
+	result, err := r.collection.UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		return fmt.Errorf("failed to update asset wallet type in db: %w", err)
+	}
+
+	if result.ModifiedCount == 0 {
+		return fmt.Errorf("asset with ID %s not found or type is already the same", assetID)
+	}
+
+	log.Printf("Successfully updated wallet type for asset ID %s", assetID)
+	return nil
+}
+
 // RemoveSubscription usuwa subskrypcję o podanym ID z portfela w bazie danych.
 func (r *PortfolioRepo) RemoveSubscription(ctx context.Context, subID string) error {
 	portfolio, err := r.LoadPortfolio(ctx)

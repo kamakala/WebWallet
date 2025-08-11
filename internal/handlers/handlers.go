@@ -53,12 +53,13 @@ func (h *AppHandler) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	if len(portfolio.Assets) == 0 && len(portfolio.Subscriptions) == 0 {
 		log.Println("Database is empty, populating with initial sample data...")
 		portfolio.AddAsset(models.Asset{
-			ID:       "A1",
-			Name:     "Akcje Testowe (DB)",
-			Symbol:   "DBG",
-			Type:     "Akcje",
-			Quantity: 10.0,
-			AvgCost:  100.00,
+			ID:         "A1",
+			Name:       "Akcje Testowe (DB)",
+			Symbol:     "DBG",
+			Type:       "Akcje",
+			Quantity:   10.0,
+			AvgCost:    100.00,
+			WalletType: "Poduszka",
 		})
 		portfolio.AddSubscription(models.Subscription{
 			ID:        "S1",
@@ -128,6 +129,8 @@ func (h *AppHandler) AddAssetHandler(w http.ResponseWriter, r *http.Request) {
 		assetType := r.FormValue("type")
 		quantityStr := r.FormValue("quantity")
 		avgCostStr := r.FormValue("avgCost")
+		currentPriceStr := r.FormValue("currentPrice")
+		walletType := r.FormValue("walletType")
 
 		// Walidacja i konwersja danych
 		quantity, err := strconv.ParseFloat(quantityStr, 64)
@@ -143,15 +146,23 @@ func (h *AppHandler) AddAssetHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		currentPrice, err := strconv.ParseFloat(currentPriceStr, 64)
+		if err != nil {
+			message = "Nieprawidłowa wartość 'Obecna cena'."
+			h.renderAddAssetForm(w, message)
+			return
+		}
+
 		// Utwórz nowe aktywo
 		newAsset := models.Asset{
-			ID:       models.GenerateID(), // Utwórz nową funkcję GenerateID w models
-			Name:     name,
-			Symbol:   symbol,
-			Type:     assetType,
-			Quantity: quantity,
-			AvgCost:  avgCost,
-			//CurrentPrice: avgCost, // Na razie CurrentPrice = AvgCost
+			ID:           models.GenerateID(), // Utwórz nową funkcję GenerateID w models
+			Name:         name,
+			Symbol:       symbol,
+			Type:         assetType,
+			Quantity:     quantity,
+			AvgCost:      avgCost,
+			CurrentPrice: currentPrice,
+			WalletType:   walletType,
 		}
 
 		// Wczytaj aktualny portfel, dodaj aktywo i zapisz
@@ -352,6 +363,134 @@ func (h *AppHandler) UpdateAssetHandler(w http.ResponseWriter, r *http.Request) 
 // renderUpdateAssetForm pomaga renderować komponent UpdateAssetForm
 func (h *AppHandler) renderUpdateAssetForm(w http.ResponseWriter, asset models.Asset, message string) {
 	err := views.UpdateAssetForm(asset, message).Render(context.Background(), w)
+	if err != nil {
+		http.Error(w, "Error rendering update asset form", http.StatusInternalServerError)
+		log.Printf("Error rendering update asset form: %v", err)
+		return
+	}
+}
+
+// helper func for checking if string is in slice
+func isInSlice(s string, slice []string) bool {
+	for _, v := range slice {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *AppHandler) UpdateWalletTypeHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	var message string           // Komunikat dla użytkownika
+	var targetAsset models.Asset // Aktywo, które będziemy aktualizować/wyświetlać
+	var allowedTypes = []string{"Poduszka Finansowa", "Portfel Długoterminowy", "Portfel Krótkoteminowy"}
+	if r.Method == http.MethodPost {
+		// --- Obsługa żądania POST (przetwarzanie formularza) ---
+		err := r.ParseForm()
+		if err != nil {
+			message = fmt.Sprintf("Błąd parsowania formularza: %v", err)
+			log.Printf("Error parsing update asset form: %v", err)
+			// Spróbuj załadować aktywo, żeby formularz nie był pusty
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, a := range portfolio.Assets {
+					if a.ID == r.FormValue("asset_id") {
+						targetAsset = a
+						break
+					}
+				}
+			}
+			h.renderUpdateWalletTypeForm(w, targetAsset, message)
+			return
+		}
+
+		assetID := r.FormValue("asset_id")
+		newWalletType := r.FormValue("new_wallet_type")
+
+		if assetID == "" {
+			message = "Brak identyfikatora aktywa do aktualizacji."
+			h.renderUpdateWalletTypeForm(w, targetAsset, message) // targetAsset będzie puste
+			return
+		}
+
+		// Sprawdź czy aktywo należy do dozwolonych typów
+		if !isInSlice(newWalletType, allowedTypes) {
+			// Tutaj umieść kod, który był w Twojej pętli
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, a := range portfolio.Assets {
+					if a.ID == assetID {
+						targetAsset = a
+						break
+					}
+				}
+			}
+			h.renderUpdateWalletTypeForm(w, targetAsset, message)
+			return
+		}
+
+		// Wywołaj funkcję repozytorium do aktualizacji aktywa
+		err = h.portfolioRepo.UpdateAssetWalletType(ctx, assetID, newWalletType)
+		if err != nil {
+			message = fmt.Sprintf("Błąd aktualizacji aktywa: %v", err)
+			log.Printf("Error updating asset (ID: %s): %v", assetID, err)
+			// Spróbuj załadować aktywo, żeby formularz nie był pusty
+			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+			if loadErr == nil {
+				for _, a := range portfolio.Assets {
+					if a.ID == assetID {
+						targetAsset = a
+						break
+					}
+				}
+			}
+			h.renderUpdateWalletTypeForm(w, targetAsset, message)
+			return
+		}
+
+		log.Printf("Aktywo o ID %s zaktualizowane pomyślnie. Zmieniono typ portfela na %s.", assetID, newWalletType)
+		http.Redirect(w, r, "/", http.StatusSeeOther) // Przekieruj na stronę główną po sukcesie
+		return
+
+	} else {
+		// --- Obsługa żądania GET (wyświetlanie formularza) ---
+		assetID := r.URL.Query().Get("id")
+		if assetID == "" {
+			http.Error(w, "Brak identyfikatora aktywa do aktualizacji.", http.StatusBadRequest)
+			return
+		}
+
+		portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
+		if err != nil {
+			http.Error(w, "Nie udało się załadować portfela.", http.StatusInternalServerError)
+			log.Printf("Error loading portfolio for update asset form: %v", err)
+			return
+		}
+
+		found := false
+		for _, asset := range portfolio.Assets {
+			if asset.ID == assetID {
+				targetAsset = asset
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			http.Error(w, "Aktywo nie znalezione.", http.StatusNotFound)
+			return
+		}
+
+		h.renderUpdateWalletTypeForm(w, targetAsset, "")
+	}
+}
+
+// renderUpdateWalletTypeForm pomaga renderować komponent UpdateWalletTypeForm
+func (h *AppHandler) renderUpdateWalletTypeForm(w http.ResponseWriter, asset models.Asset, message string) {
+	err := views.UpdateWalletTypeForm(asset, message).Render(context.Background(), w)
 	if err != nil {
 		http.Error(w, "Error rendering update asset form", http.StatusInternalServerError)
 		log.Printf("Error rendering update asset form: %v", err)

@@ -5,6 +5,7 @@ package views
 import "webwallet/internal/models"
 // import "time" // Dla formatowania daty
 import "fmt"   // Dla printf w szablonie
+//import string
 
 // home.templ przyjmuje te same dane, co PageData w handlerze
 templ Home(
@@ -50,6 +51,7 @@ templ Home(
 					<th>Śr. Koszt zakupu</th>
 					<th>Wartość</th>
 					<th>Wartość Całkowita</th>
+					<th>Strategia</th>
 					<th>Akcje</th>
 				</tr>
 			</thead>
@@ -63,9 +65,12 @@ templ Home(
 						<td>{ fmt.Sprintf("%.2f PLN", asset.AvgCost) }</td>
 						<td>{ fmt.Sprintf("%.2f PLN", asset.CurrentPrice) }</td>
 						<td>{ fmt.Sprintf("%.2f PLN", asset.Quantity * asset.CurrentPrice) }</td>
+						<td>{ asset.WalletType }</td>
 						<td>
 							<a href={ fmt.Sprintf("/update-asset?id=%s", asset.ID) } class="update-button">Dodaj Ilość</a><br>
 							<a href={ fmt.Sprintf("/update-price?id=%s", asset.ID) } class="update-button">Aktualizuj Wartość</a>
+							<a href={ fmt.Sprintf("/update-wallet-type?id=%s", asset.ID) } class="update-button">Aktualizuj Typ Portfela</a>
+
 							<form action={ fmt.Sprintf("/delete-asset?id=%s", asset.ID) } method="POST" onsubmit="return confirm('Czy na pewno chcesz usunąć to aktywo?');">
 								<button type="submit" class="delete-button">Usuń</button>
 							</form>

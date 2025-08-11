@@ -16,6 +16,7 @@ type Asset struct {
 	Quantity     float64 `json:"quantity" bson:"quantity"`
 	AvgCost      float64 `json:"avgCost" bson:"avgCost"`
 	CurrentPrice float64 `json:"currentPrice" bson:"currentPrice"`
+	WalletType   string  `json:"walletType" bson:"walletType"`
 }
 
 // Subscription reprezentuje pojedynczą subskrypcję lub stały koszt.

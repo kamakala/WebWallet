@@ -1,0 +1,30 @@
+// internal/views/update_asset.templ
+package views
+
+import "webwallet/internal/models"
+
+// UpdateAssetForm przyjmuje dane aktywa do wyświetlenia i komunikat.
+templ UpdateWalletTypeForm(asset models.Asset, message string) {
+	@Layout("Aktualizuj Aktywo", RenderUpdateWalletTypeContent(asset, message), &models.InvestmentPortfolio{}, "", "", "", 0, 0)
+}
+
+// RenderUpdateAssetContent to pomocniczy komponent renderujący samą zawartość formularza.
+templ RenderUpdateWalletTypeContent(asset models.Asset, message string) {
+    <div class="form-container">
+        <h2>Aktualizuj Aktywo: { asset.Name } ({ asset.Symbol })</h2>
+        <p>Obecny typ portfelu: { asset.WalletType }</p>
+        if message != "" {
+            <p class="message">{ message }</p>
+        }
+
+        <form action="/update-wallet-type" method="POST">
+            <input type="hidden" name="asset_id" value={ asset.ID }/>
+            <div class="form-group">
+                <label for="newWalletType">Nowy typ portfela:</label>
+                <input type="text" id="newWalletType" name="new_wallet_type" required/>
+            </div>
+            <button type="submit">Aktualizuj Aktywo</button>
+        </form>
+        <p><a href="/">Powrót do portfela</a></p>
+    </div>
+}

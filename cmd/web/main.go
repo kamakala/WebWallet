@@ -55,6 +55,7 @@ func main() {
 	http.HandleFunc("/add-subscription", mainHandler.AddSubscriptionHandler)
 	http.HandleFunc("/delete-subscription", mainHandler.DeleteSubscriptionHandler)
 	http.HandleFunc("/update-subscription", mainHandler.UpdateSubscriptionHandler)
+	http.HandleFunc("/update-wallet-type", mainHandler.UpdateWalletTypeHandler)
 
 	// Ustawienie handlera dla statycznych plików
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
