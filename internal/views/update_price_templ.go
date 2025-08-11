@@ -140,7 +140,7 @@ func RenderUpdatePriceContent(asset models.Asset, message string) templ.Componen
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\"><div class=\"form-group\"><label for=\"newCurrentPrice\">Nowa Cena:</label> <input type=\"number\" id=\"newCurrentPrice\" name=\"currentPrice\" step=\"0.01\" min=\"0\" required></div><button type=\"submit\">Aktualizuj Aktywo</button></form><p><a href=\"/\">Powrót do portfela</a></p></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\"><div class=\"form-group\"><label for=\"newCurrentPrice\">Nowa Cena:</label> <input type=\"number\" id=\"newCurrentPrice\" name=\"currentPrice\" step=\"0.01\" min=\"0\" required></div><button type=\"submit\" class=\"update-button\">Aktualizuj Aktywo</button></form><p><a href=\"/\">Powrót do portfela</a></p></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -16,10 +16,14 @@ templ Layout(title string, content templ.Component, portfolioData *models.Invest
 		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 		<title>{ title }</title>
 		<link rel="stylesheet" href="/static/css/style.css"/>
+		<script src="/static/js/app.js" defer></script>
 	</head>
 	<body>
 		<header>
 			<h1>Mój Portfel Inwestycyjny</h1>
+			<button id="theme-toggle" class="theme-toggle">
+				<span id="theme-icon">🌙</span>
+			</button>
 			<nav>
 				<a href="/">Strona Główna</a>
 				</nav>
