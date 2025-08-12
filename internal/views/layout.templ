@@ -16,7 +16,9 @@ templ Layout(title string, content templ.Component, portfolioData *models.Invest
 		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 		<title>{ title }</title>
 		<link rel="stylesheet" href="/static/css/style.css"/>
-		<script src="/static/js/app.js" defer></script>
+		<script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    	<script src="/static/js/app.js" defer></script>
 	</head>
 	<body>
 		<header>
@@ -26,6 +28,8 @@ templ Layout(title string, content templ.Component, portfolioData *models.Invest
 			</button>
 			<nav>
 				<a href="/">Strona Główna</a>
+				<a href="/visualizations">Wykresy</a>
+
 				</nav>
 		</header>
 		<main>

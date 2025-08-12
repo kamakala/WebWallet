@@ -1,0 +1,35 @@
+// internal/views/visualizations.templ
+package views
+
+import (
+	"fmt"
+)
+
+templ Visualizations(portfolioTypes []string, initialDataString string) {
+	@Layout("Wizualizacje Portfela", renderVisualizationsContent(portfolioTypes, initialDataString), nil, "", "", "", 0, 0)
+}
+
+templ renderVisualizationsContent(portfolioTypes []string, initialDataString string) {
+	<div class="visualizations-container">
+		<h2>Wizualizacje Portfela</h2>
+		<div class="filter-buttons">
+			<button
+				class="filter-button"
+				hx-get="/visualizations/data?portfolioType=Wszystkie"
+				hx-target="#chart-container"
+				hx-swap="innerHTML"
+			>Wszystkie</button>
+			for _, pType := range portfolioTypes {
+				<button
+					class="filter-button"
+					hx-get={ templ.URL(fmt.Sprintf("/visualizations/data?portfolioType=%s", pType)) }
+					hx-target="#chart-container"
+					hx-swap="innerHTML"
+				>{ pType }</button>
+			}
+		</div>
+		<div id="chart-container">
+			@VisualizationCharts(initialDataString)
+		</div>
+	</div>
+}

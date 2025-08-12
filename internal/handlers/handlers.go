@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -859,4 +860,118 @@ func (h *AppHandler) renderUpdatePriceForm(w http.ResponseWriter, asset models.A
 
 	// Placeholder until the view is created
 	//fmt.Fprintf(w, "<h1>Update Price for %s</h1><p>%s</p><form method='POST'><label>New Price:</label><input type='text' name='currentPrice' value='%.2f'><button type='submit'>Update</button></form>", asset.Name, message, asset.CurrentPrice)
+}
+
+// VisualizationsHandler wyświetla stronę z wykresami
+func (h *AppHandler) VisualizationsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
+	if err != nil {
+		log.Printf("Błąd ładowania portfela: %v", err)
+		http.Error(w, "Nie udało się załadować portfela.", http.StatusInternalServerError)
+		return
+	}
+
+	portfolioTypes := make(map[string]struct{})
+	for _, asset := range portfolio.Assets {
+		if asset.WalletType != "" {
+			portfolioTypes[asset.WalletType] = struct{}{}
+		}
+	}
+
+	var typesList []string
+	for t := range portfolioTypes {
+		typesList = append(typesList, t)
+	}
+
+	// Przygotowanie danych dla początkowego widoku "Wszystkie"
+	initialDataString, err := prepareChartData(portfolio.Assets)
+	if err != nil {
+		log.Printf("Błąd przygotowania danych wykresu: %v", err)
+		http.Error(w, "Błąd renderowania wykresów.", http.StatusInternalServerError)
+		return
+	}
+
+	if err := views.Visualizations(typesList, initialDataString).Render(r.Context(), w); err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+		log.Printf("Error rendering visualization template: %v", err)
+	}
+}
+
+// GetVisualizationDataHandler zwraca fragment HTML z danymi dla HTMX
+func (h *AppHandler) GetVisualizationDataHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
+	if err != nil {
+		http.Error(w, "Nie udało się załadować portfela.", http.StatusInternalServerError)
+		return
+	}
+
+	portfolioType := r.URL.Query().Get("portfolioType")
+	log.Printf("Pobieranie danych dla typu portfela: %s", portfolioType)
+
+	var filteredAssets []models.Asset
+	if portfolioType == "Wszystkie" {
+		filteredAssets = portfolio.Assets
+	} else {
+		for _, asset := range portfolio.Assets {
+			if asset.WalletType == portfolioType {
+				filteredAssets = append(filteredAssets, asset)
+			}
+		}
+	}
+
+	dataString, err := prepareChartData(filteredAssets)
+	if err != nil {
+		log.Printf("Błąd przygotowania danych wykresu: %v", err)
+		http.Error(w, "Błąd renderowania wykresów.", http.StatusInternalServerError)
+		return
+	}
+
+	if err := views.VisualizationCharts(dataString).Render(r.Context(), w); err != nil {
+		http.Error(w, "Failed to render charts template", http.StatusInternalServerError)
+		log.Printf("Error rendering charts template: %v", err)
+	}
+}
+
+// Nowa struktura do parsowania odpowiedzi JSON z FMP dla danych historycznych
+type FmpHistoricalPriceFull struct {
+	Symbol     string `json:"symbol"`
+	Historical []struct {
+		Close float64 `json:"close"` // To jest cena EOD (zamknięcia), której szukamy
+	} `json:"historical"`
+}
+
+// Funkcja pomocnicza do przygotowania danych JSON
+func prepareChartData(assets []models.Asset) (string, error) {
+	type ChartData struct {
+		Labels []string  `json:"labels"`
+		Values []float64 `json:"values"`
+	}
+
+	var chartData = ChartData{
+		Labels: make([]string, 0),
+		Values: make([]float64, 0),
+	}
+
+	valueByAsset := make(map[string]float64)
+	for _, asset := range assets {
+		valueByAsset[asset.Name] += asset.Quantity * asset.CurrentPrice
+	}
+
+	for name, value := range valueByAsset {
+		chartData.Labels = append(chartData.Labels, name)
+		chartData.Values = append(chartData.Values, value)
+	}
+
+	dataJSON, err := json.Marshal(chartData)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal chart data: %w", err)
+	}
+
+	return string(dataJSON), nil
 }

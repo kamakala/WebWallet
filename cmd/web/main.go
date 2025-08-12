@@ -57,6 +57,9 @@ func main() {
 	http.HandleFunc("/update-subscription", mainHandler.UpdateSubscriptionHandler)
 	http.HandleFunc("/update-wallet-type", mainHandler.UpdateWalletTypeHandler)
 
+	http.HandleFunc("/visualizations", mainHandler.VisualizationsHandler)            // Nowa podstrona
+	http.HandleFunc("/visualizations/data", mainHandler.GetVisualizationDataHandler) // Endpoint HTMX
+
 	// Ustawienie handlera dla statycznych plików
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 

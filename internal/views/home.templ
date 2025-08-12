@@ -68,7 +68,7 @@ templ Home(
 						<td>{ asset.WalletType }</td>
 						<td>
 							<a href={ fmt.Sprintf("/update-asset?id=%s", asset.ID) } class="update-button">Dodaj Ilość</a><br>
-							<a href={ fmt.Sprintf("/update-price?id=%s", asset.ID) } class="update-button">Aktualizuj Wartość</a>
+							<a href={ fmt.Sprintf("/update-price?id=%s", asset.ID) } class="update-button">Aktualizuj Wartość</a><br>
 							<a href={ fmt.Sprintf("/update-wallet-type?id=%s", asset.ID) } class="update-button">Aktualizuj Typ Portfela</a>
 
 							<form action={ fmt.Sprintf("/delete-asset?id=%s", asset.ID) } method="POST" onsubmit="return confirm('Czy na pewno chcesz usunąć to aktywo?');">

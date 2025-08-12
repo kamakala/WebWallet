@@ -50,7 +50,7 @@ func Layout(title string, content templ.Component, portfolioData *models.Investm
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><link rel=\"stylesheet\" href=\"/static/css/style.css\"><script src=\"/static/js/app.js\" defer></script></head><body><header><h1>Mój Portfel Inwestycyjny</h1><button id=\"theme-toggle\" class=\"theme-toggle\"><span id=\"theme-icon\">🌙</span></button><nav><a href=\"/\">Strona Główna</a></nav></header><main>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><link rel=\"stylesheet\" href=\"/static/css/style.css\"><script src=\"https://unpkg.com/htmx.org@1.9.10\" defer></script><script src=\"https://cdn.jsdelivr.net/npm/chart.js\" defer></script><script src=\"/static/js/app.js\" defer></script></head><body><header><h1>Mój Portfel Inwestycyjny</h1><button id=\"theme-toggle\" class=\"theme-toggle\"><span id=\"theme-icon\">🌙</span></button><nav><a href=\"/\">Strona Główna</a> <a href=\"/visualizations\">Wykresy</a></nav></header><main>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -65,7 +65,7 @@ func Layout(title string, content templ.Component, portfolioData *models.Investm
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", time.Now().Year()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 36, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 40, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
