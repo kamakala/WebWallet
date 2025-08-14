@@ -28,7 +28,7 @@
 }
 
 /* Definicja zmiennych kolorów dla motywu ciemnego */
-body.dark-theme {
+html.dark {
     --bg-color: #1a1a1a;
     --primary-bg: #2c3e50;
     --secondary-bg: #333333;

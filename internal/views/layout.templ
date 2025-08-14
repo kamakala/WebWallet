@@ -5,27 +5,33 @@ package views
 import "fmt"
 import "webwallet/internal/models"
 import "time" // Dla formatowania daty
+import "webwallet/internal/middleware"
 
 
 // layout.templ będzie przyjmował tytuł strony i jej zawartość (jako func)
 templ Layout(title string, content templ.Component, portfolioData *models.InvestmentPortfolio, monthlySubsCost, totalPortfolioValue, profitLoss string, profitLossRaw float64, profitLossPercentage float64) {
 	<!DOCTYPE html>
-	<html lang="pl">
-	<head>
+	<html lang="pl" class={ templ.KV("dark", middleware.GetTheme(ctx) == "dark") }>	<head>
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 		<title>{ title }</title>
 		<link rel="stylesheet" href="/static/css/style.css"/>
 		<script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-    	<script src="/static/js/app.js" defer></script>
+    //	<script src="/static/js/app.js" defer></script>
 	</head>
 	<body>
 		<header>
 			<h1>Mój Portfel Inwestycyjny</h1>
-			<button id="theme-toggle" class="theme-toggle">
-				<span id="theme-icon">🌙</span>
-			</button>
+			<form action="/toggle-theme" method="POST" style="display: inline;">
+				<button id="theme-toggle" class="theme-toggle" title="Zmień motyw">
+					if middleware.GetTheme(ctx) == "dark" {
+						<span>☀️</span>
+					} else {
+						<span>🌙</span>
+					}
+				</button>
+			</form>
 			<nav>
 				<a href="/">Strona Główna</a>
 				<a href="/visualizations">Wykresy</a>

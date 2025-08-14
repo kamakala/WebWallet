@@ -9,8 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
 	"webwallet/internal/handlers"
+	"webwallet/internal/middleware"
 	"webwallet/internal/repository" // Importujemy pakiet repository
 )
 
@@ -42,29 +42,34 @@ func main() {
 	// Przekazanie repozytorium do handlera
 	// Tworzymy nową instancję handlera z wstrzykniętym repozytorium
 	mainHandler := handlers.NewAppHandler(portfolioRepo)
+	// Tworzymy multiplexer (mux), który będzie zarządzał routingiem.
+	mux := http.NewServeMux()
 
 	// Ustawienie handlera dla ścieżki głównej (teraz używamy metody z mainHandler)
-	http.HandleFunc("/", mainHandler.HomeHandler)
+	mux.HandleFunc("/", mainHandler.HomeHandler)
 
-	http.HandleFunc("/add-asset", mainHandler.AddAssetHandler) // Rejestracja dla GET i POST
+	mux.HandleFunc("/add-asset", mainHandler.AddAssetHandler) // Rejestracja dla GET i POST
 
-	http.HandleFunc("/delete-asset", mainHandler.DeleteAssetHandler)
+	mux.HandleFunc("/delete-asset", mainHandler.DeleteAssetHandler)
 
-	http.HandleFunc("/update-asset", mainHandler.UpdateAssetHandler)
-	http.HandleFunc("/update-price", mainHandler.UpdateAssetPriceHandler)
-	http.HandleFunc("/add-subscription", mainHandler.AddSubscriptionHandler)
-	http.HandleFunc("/delete-subscription", mainHandler.DeleteSubscriptionHandler)
-	http.HandleFunc("/update-subscription", mainHandler.UpdateSubscriptionHandler)
-	http.HandleFunc("/update-wallet-type", mainHandler.UpdateWalletTypeHandler)
+	mux.HandleFunc("/update-asset", mainHandler.UpdateAssetHandler)
+	mux.HandleFunc("/update-price", mainHandler.UpdateAssetPriceHandler)
+	mux.HandleFunc("/add-subscription", mainHandler.AddSubscriptionHandler)
+	mux.HandleFunc("/delete-subscription", mainHandler.DeleteSubscriptionHandler)
+	mux.HandleFunc("/update-subscription", mainHandler.UpdateSubscriptionHandler)
+	mux.HandleFunc("/update-wallet-type", mainHandler.UpdateWalletTypeHandler)
 
-	http.HandleFunc("/visualizations", mainHandler.VisualizationsHandler)            // Nowa podstrona
-	http.HandleFunc("/visualizations/data", mainHandler.GetVisualizationDataHandler) // Endpoint HTMX
+	mux.HandleFunc("/visualizations", mainHandler.VisualizationsHandler)            // Nowa podstrona
+	mux.HandleFunc("/visualizations/data", mainHandler.GetVisualizationDataHandler) // Endpoint HTMX
+	mux.HandleFunc("/toggle-theme", mainHandler.ThemeToggleHandler)
 
 	// Ustawienie handlera dla statycznych plików
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
+	themedMux := middleware.ThemeMiddleware(mux)
 
 	// Graceful shutdown (kontrolowane wyłączanie serwera)
-	server := &http.Server{Addr: ":8080"}
+	server := &http.Server{Addr: ":8080", Handler: themedMux}
 	go func() {
 		fmt.Println("Serwer uruchomiony na porcie :8080")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

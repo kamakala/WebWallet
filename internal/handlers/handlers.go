@@ -32,6 +32,32 @@ type AppHandler struct {
 	portfolioRepo *repository.PortfolioRepo
 }
 
+// ThemeToggleHandler zmienia wartość motywu w ciasteczku.
+func (h *AppHandler) ThemeToggleHandler(w http.ResponseWriter, r *http.Request) {
+	currentTheme := "light"
+	cookie, err := r.Cookie("theme")
+	if err == nil && cookie.Value == "dark" {
+		currentTheme = "dark"
+	}
+
+	newTheme := "dark"
+	if currentTheme == "dark" {
+		newTheme = "light"
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "theme",
+		Value:    newTheme,
+		Path:     "/",             // Ciasteczko dostępne na całej stronie
+		MaxAge:   3600 * 24 * 365, // Ważne przez rok
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	// Przekieruj użytkownika z powrotem na stronę, z której przyszedł.
+	http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
+}
+
 // NewAppHandler tworzy nową instancję AppHandler z zależnościami.
 func NewAppHandler(repo *repository.PortfolioRepo) *AppHandler {
 	return &AppHandler{
