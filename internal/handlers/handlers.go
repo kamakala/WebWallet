@@ -146,7 +146,7 @@ func (h *AppHandler) AddAssetHandler(w http.ResponseWriter, r *http.Request) {
 			message = fmt.Sprintf("Błąd parsowania formularza: %v", err)
 			log.Printf("Error parsing form: %v", err)
 			// Renderuj formularz ponownie z komunikatem o błędzie
-			h.renderAddAssetForm(w, message)
+			h.renderAddAssetForm(w, r, message)
 			return
 		}
 
@@ -163,20 +163,20 @@ func (h *AppHandler) AddAssetHandler(w http.ResponseWriter, r *http.Request) {
 		quantity, err := strconv.ParseFloat(quantityStr, 64)
 		if err != nil {
 			message = "Nieprawidłowa wartość 'Ilość'."
-			h.renderAddAssetForm(w, message)
+			h.renderAddAssetForm(w, r, message)
 			return
 		}
 		avgCost, err := strconv.ParseFloat(avgCostStr, 64)
 		if err != nil {
 			message = "Nieprawidłowa wartość 'Średni Koszt Zakupu'."
-			h.renderAddAssetForm(w, message)
+			h.renderAddAssetForm(w, r, message)
 			return
 		}
 
 		currentPrice, err := strconv.ParseFloat(currentPriceStr, 64)
 		if err != nil {
 			message = "Nieprawidłowa wartość 'Obecna cena'."
-			h.renderAddAssetForm(w, message)
+			h.renderAddAssetForm(w, r, message)
 			return
 		}
 
@@ -197,7 +197,7 @@ func (h *AppHandler) AddAssetHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			message = fmt.Sprintf("Błąd ładowania portfela: %v", err)
 			log.Printf("Error loading portfolio for asset addition: %v", err)
-			h.renderAddAssetForm(w, message)
+			h.renderAddAssetForm(w, r, message)
 			return
 		}
 
@@ -206,7 +206,7 @@ func (h *AppHandler) AddAssetHandler(w http.ResponseWriter, r *http.Request) {
 		if err := h.portfolioRepo.SavePortfolio(ctx, portfolio); err != nil {
 			message = fmt.Sprintf("Błąd zapisu portfela: %v", err)
 			log.Printf("Error saving portfolio after asset addition: %v", err)
-			h.renderAddAssetForm(w, message)
+			h.renderAddAssetForm(w, r, message)
 			return
 		}
 
@@ -218,12 +218,12 @@ func (h *AppHandler) AddAssetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// GET request: wyświetl formularz
-	h.renderAddAssetForm(w, "")
+	h.renderAddAssetForm(w, r, "")
 }
 
 // renderAddAssetForm pomaga renderować komponent AddAssetForm
-func (h *AppHandler) renderAddAssetForm(w http.ResponseWriter, message string) {
-	err := views.AddAssetForm(message).Render(context.Background(), w)
+func (h *AppHandler) renderAddAssetForm(w http.ResponseWriter, r *http.Request, message string) {
+	err := views.AddAssetForm(message).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering add asset form", http.StatusInternalServerError)
 		log.Printf("Error rendering add asset form: %v", err)
@@ -283,7 +283,7 @@ func (h *AppHandler) UpdateAssetHandler(w http.ResponseWriter, r *http.Request) 
 					}
 				}
 			}
-			h.renderUpdateAssetForm(w, targetAsset, message)
+			h.renderUpdateAssetForm(w, r, targetAsset, message)
 			return
 		}
 
@@ -293,7 +293,7 @@ func (h *AppHandler) UpdateAssetHandler(w http.ResponseWriter, r *http.Request) 
 
 		if assetID == "" {
 			message = "Brak identyfikatora aktywa do aktualizacji."
-			h.renderUpdateAssetForm(w, targetAsset, message) // targetAsset będzie puste
+			h.renderUpdateAssetForm(w, r, targetAsset, message) // targetAsset będzie puste
 			return
 		}
 
@@ -310,7 +310,7 @@ func (h *AppHandler) UpdateAssetHandler(w http.ResponseWriter, r *http.Request) 
 					}
 				}
 			}
-			h.renderUpdateAssetForm(w, targetAsset, message)
+			h.renderUpdateAssetForm(w, r, targetAsset, message)
 			return
 		}
 
@@ -327,7 +327,7 @@ func (h *AppHandler) UpdateAssetHandler(w http.ResponseWriter, r *http.Request) 
 					}
 				}
 			}
-			h.renderUpdateAssetForm(w, targetAsset, message)
+			h.renderUpdateAssetForm(w, r, targetAsset, message)
 			return
 		}
 
@@ -346,7 +346,7 @@ func (h *AppHandler) UpdateAssetHandler(w http.ResponseWriter, r *http.Request) 
 					}
 				}
 			}
-			h.renderUpdateAssetForm(w, targetAsset, message)
+			h.renderUpdateAssetForm(w, r, targetAsset, message)
 			return
 		}
 
@@ -383,13 +383,13 @@ func (h *AppHandler) UpdateAssetHandler(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		h.renderUpdateAssetForm(w, targetAsset, "")
+		h.renderUpdateAssetForm(w, r, targetAsset, "")
 	}
 }
 
 // renderUpdateAssetForm pomaga renderować komponent UpdateAssetForm
-func (h *AppHandler) renderUpdateAssetForm(w http.ResponseWriter, asset models.Asset, message string) {
-	err := views.UpdateAssetForm(asset, message).Render(context.Background(), w)
+func (h *AppHandler) renderUpdateAssetForm(w http.ResponseWriter, r *http.Request, asset models.Asset, message string) {
+	err := views.UpdateAssetForm(asset, message).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering update asset form", http.StatusInternalServerError)
 		log.Printf("Error rendering update asset form: %v", err)
@@ -430,7 +430,7 @@ func (h *AppHandler) UpdateWalletTypeHandler(w http.ResponseWriter, r *http.Requ
 					}
 				}
 			}
-			h.renderUpdateWalletTypeForm(w, targetAsset, message)
+			h.renderUpdateWalletTypeForm(w, r, targetAsset, message)
 			return
 		}
 
@@ -439,7 +439,7 @@ func (h *AppHandler) UpdateWalletTypeHandler(w http.ResponseWriter, r *http.Requ
 
 		if assetID == "" {
 			message = "Brak identyfikatora aktywa do aktualizacji."
-			h.renderUpdateWalletTypeForm(w, targetAsset, message) // targetAsset będzie puste
+			h.renderUpdateWalletTypeForm(w, r, targetAsset, message) // targetAsset będzie puste
 			return
 		}
 
@@ -455,7 +455,7 @@ func (h *AppHandler) UpdateWalletTypeHandler(w http.ResponseWriter, r *http.Requ
 					}
 				}
 			}
-			h.renderUpdateWalletTypeForm(w, targetAsset, message)
+			h.renderUpdateWalletTypeForm(w, r, targetAsset, message)
 			return
 		}
 
@@ -474,7 +474,7 @@ func (h *AppHandler) UpdateWalletTypeHandler(w http.ResponseWriter, r *http.Requ
 					}
 				}
 			}
-			h.renderUpdateWalletTypeForm(w, targetAsset, message)
+			h.renderUpdateWalletTypeForm(w, r, targetAsset, message)
 			return
 		}
 
@@ -511,13 +511,13 @@ func (h *AppHandler) UpdateWalletTypeHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		h.renderUpdateWalletTypeForm(w, targetAsset, "")
+		h.renderUpdateWalletTypeForm(w, r, targetAsset, "")
 	}
 }
 
 // renderUpdateWalletTypeForm pomaga renderować komponent UpdateWalletTypeForm
-func (h *AppHandler) renderUpdateWalletTypeForm(w http.ResponseWriter, asset models.Asset, message string) {
-	err := views.UpdateWalletTypeForm(asset, message).Render(context.Background(), w)
+func (h *AppHandler) renderUpdateWalletTypeForm(w http.ResponseWriter, r *http.Request, asset models.Asset, message string) {
+	err := views.UpdateWalletTypeForm(asset, message).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering update asset form", http.StatusInternalServerError)
 		log.Printf("Error rendering update asset form: %v", err)
@@ -537,7 +537,7 @@ func (h *AppHandler) AddSubscriptionHandler(w http.ResponseWriter, r *http.Reque
 		if err != nil {
 			message = fmt.Sprintf("Błąd parsowania formularza: %v", err)
 			log.Printf("Error parsing add subscription form: %v", err)
-			h.renderAddSubscriptionForm(w, message)
+			h.renderAddSubscriptionForm(w, r, message)
 			return
 		}
 
@@ -549,14 +549,14 @@ func (h *AppHandler) AddSubscriptionHandler(w http.ResponseWriter, r *http.Reque
 		cost, err := strconv.ParseFloat(costStr, 64)
 		if err != nil {
 			message = "Nieprawidłowa wartość 'Koszt'."
-			h.renderAddSubscriptionForm(w, message)
+			h.renderAddSubscriptionForm(w, r, message)
 			return
 		}
 
 		nextDue, err := time.Parse("2006-01-02", nextDueStr)
 		if err != nil {
 			message = "Nieprawidłowy format daty 'Następna Płatność'. Użyj YYYY-MM-DD."
-			h.renderAddSubscriptionForm(w, message)
+			h.renderAddSubscriptionForm(w, r, message)
 			return
 		}
 
@@ -572,7 +572,7 @@ func (h *AppHandler) AddSubscriptionHandler(w http.ResponseWriter, r *http.Reque
 		if err != nil {
 			message = fmt.Sprintf("Błąd ładowania portfela: %v", err)
 			log.Printf("Error loading portfolio for subscription addition: %v", err)
-			h.renderAddSubscriptionForm(w, message)
+			h.renderAddSubscriptionForm(w, r, message)
 			return
 		}
 
@@ -581,7 +581,7 @@ func (h *AppHandler) AddSubscriptionHandler(w http.ResponseWriter, r *http.Reque
 		if err := h.portfolioRepo.SavePortfolio(ctx, portfolio); err != nil {
 			message = fmt.Sprintf("Błąd zapisu portfela: %v", err)
 			log.Printf("Error saving portfolio after subscription addition: %v", err)
-			h.renderAddSubscriptionForm(w, message)
+			h.renderAddSubscriptionForm(w, r, message)
 			return
 		}
 
@@ -590,12 +590,12 @@ func (h *AppHandler) AddSubscriptionHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	h.renderAddSubscriptionForm(w, "")
+	h.renderAddSubscriptionForm(w, r, "")
 }
 
 // renderAddSubscriptionForm pomaga renderować komponent AddSubscriptionForm
-func (h *AppHandler) renderAddSubscriptionForm(w http.ResponseWriter, message string) {
-	err := views.AddSubscriptionForm(message).Render(context.Background(), w)
+func (h *AppHandler) renderAddSubscriptionForm(w http.ResponseWriter, r *http.Request, message string) {
+	err := views.AddSubscriptionForm(message).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering add subscription form", http.StatusInternalServerError)
 		log.Printf("Error rendering add subscription form: %v", err)
@@ -660,7 +660,7 @@ func (h *AppHandler) UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Re
 					}
 				}
 			}
-			h.renderUpdateSubscriptionForm(w, targetSub, message)
+			h.renderUpdateSubscriptionForm(w, r, targetSub, message)
 			return
 		}
 
@@ -672,7 +672,7 @@ func (h *AppHandler) UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Re
 
 		if subID == "" {
 			message = "Brak identyfikatora subskrypcji do aktualizacji."
-			h.renderUpdateSubscriptionForm(w, targetSub, message)
+			h.renderUpdateSubscriptionForm(w, r, targetSub, message)
 			return
 		}
 
@@ -688,7 +688,7 @@ func (h *AppHandler) UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Re
 					}
 				}
 			}
-			h.renderUpdateSubscriptionForm(w, targetSub, message)
+			h.renderUpdateSubscriptionForm(w, r, targetSub, message)
 			return
 		}
 
@@ -704,7 +704,7 @@ func (h *AppHandler) UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Re
 					}
 				}
 			}
-			h.renderUpdateSubscriptionForm(w, targetSub, message)
+			h.renderUpdateSubscriptionForm(w, r, targetSub, message)
 			return
 		}
 
@@ -729,7 +729,7 @@ func (h *AppHandler) UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Re
 					}
 				}
 			}
-			h.renderUpdateSubscriptionForm(w, targetSub, message)
+			h.renderUpdateSubscriptionForm(w, r, targetSub, message)
 			return
 		}
 
@@ -766,13 +766,13 @@ func (h *AppHandler) UpdateSubscriptionHandler(w http.ResponseWriter, r *http.Re
 			return
 		}
 
-		h.renderUpdateSubscriptionForm(w, targetSub, "")
+		h.renderUpdateSubscriptionForm(w, r, targetSub, "")
 	}
 }
 
 // renderUpdateSubscriptionForm pomaga renderować komponent UpdateSubscriptionForm
-func (h *AppHandler) renderUpdateSubscriptionForm(w http.ResponseWriter, sub models.Subscription, message string) {
-	err := views.UpdateSubscriptionForm(sub, message).Render(context.Background(), w)
+func (h *AppHandler) renderUpdateSubscriptionForm(w http.ResponseWriter, r *http.Request, sub models.Subscription, message string) {
+	err := views.UpdateSubscriptionForm(sub, message).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering update subscription form", http.StatusInternalServerError)
 		log.Printf("Error rendering update subscription form: %v", err)
@@ -804,7 +804,7 @@ func (h *AppHandler) UpdateAssetPriceHandler(w http.ResponseWriter, r *http.Requ
 					}
 				}
 			}
-			h.renderUpdatePriceForm(w, targetAsset, message)
+			h.renderUpdatePriceForm(w, r, targetAsset, message)
 			return
 		}
 
@@ -823,7 +823,7 @@ func (h *AppHandler) UpdateAssetPriceHandler(w http.ResponseWriter, r *http.Requ
 					}
 				}
 			}
-			h.renderUpdatePriceForm(w, targetAsset, message)
+			h.renderUpdatePriceForm(w, r, targetAsset, message)
 			return
 		}
 
@@ -831,7 +831,7 @@ func (h *AppHandler) UpdateAssetPriceHandler(w http.ResponseWriter, r *http.Requ
 		if err != nil {
 			log.Printf("Błąd aktualizacji ceny aktywa (ID: %s): %v", assetID, err)
 			message := fmt.Sprintf("Nie udało się zaktualizować ceny: %v", err)
-			h.renderUpdatePriceForm(w, targetAsset, message)
+			h.renderUpdatePriceForm(w, r, targetAsset, message)
 			return
 		}
 
@@ -867,19 +867,19 @@ func (h *AppHandler) UpdateAssetPriceHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		h.renderUpdatePriceForm(w, targetAsset, "")
+		h.renderUpdatePriceForm(w, r, targetAsset, "")
 	}
 
 }
 
 // renderUpdatePriceForm pomaga renderować komponent formularza aktualizacji ceny.
 // (You will need to create a corresponding `views.UpdatePriceForm` component)
-func (h *AppHandler) renderUpdatePriceForm(w http.ResponseWriter, asset models.Asset, message string) {
+func (h *AppHandler) renderUpdatePriceForm(w http.ResponseWriter, r *http.Request, asset models.Asset, message string) {
 	// This assumes you create a new view: `views.UpdatePriceForm(asset, message)`
 	// For now, let's log it. You would need to create `update_price.templ`.
 	log.Printf("Rendering update price form for asset: %s", asset.Name)
 	//Example of what the call would look like:
-	err := views.UpdatePriceForm(asset, message).Render(context.Background(), w)
+	err := views.UpdatePriceForm(asset, message).Render(r.Context(), w)
 	if err != nil {
 		http.Error(w, "Error rendering update price form", http.StatusInternalServerError)
 	}
