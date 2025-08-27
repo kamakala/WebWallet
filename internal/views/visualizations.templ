@@ -1,35 +1,73 @@
-// internal/views/visualizations.templ
 package views
 
 import (
-	"fmt"
+    "fmt"
+    "webwallet/internal/models"
+
 )
 
-templ Visualizations(portfolioTypes []string, initialDataString string) {
-	@Layout("Wizualizacje Portfela", renderVisualizationsContent(portfolioTypes, initialDataString), nil, "", "", "", 0, 0)
+// Komponent strony z wizualizacjami
+templ VisualizationsPage(portfolioTypes []string, assetTypes []string, portfolio *models.InvestmentPortfolio) {
+    // Używamy głównego layoutu, przekazując mu treść specyficzną dla tej strony
+    @Layout("Wizualizacje Portfela", visualizationsContent(portfolioTypes, assetTypes), portfolio, "", "", "", 0, 0)
 }
 
-templ renderVisualizationsContent(portfolioTypes []string, initialDataString string) {
-	<div class="visualizations-container">
-		<h2>Wizualizacje Portfela</h2>
-		<div class="filter-buttons">
-			<button
-				class="filter-button"
-				hx-get="/visualizations/data?portfolioType=Wszystkie"
-				hx-target="#chart-container"
-				hx-swap="innerHTML"
-			>Wszystkie</button>
-			for _, pType := range portfolioTypes {
-				<button
-					class="filter-button"
-					hx-get={ templ.URL(fmt.Sprintf("/visualizations/data?portfolioType=%s", pType)) }
-					hx-target="#chart-container"
-					hx-swap="innerHTML"
-				>{ pType }</button>
-			}
-		</div>
-		<div id="chart-container">
-			@VisualizationCharts(initialDataString)
-		</div>
-	</div>
+// Komponent zawierający logikę filtrów i kontener na wykres
+templ visualizationsContent(portfolioTypes []string, assetTypes []string) {
+    <div class="visualizations-container">
+        <h2>Wizualizacje Portfela</h2>
+        <p>Podział według typów strategii.</p>
+        <div class="filter-buttons">
+            // Przycisk "Wszystkie" - ładuje dane dla całego portfela
+            <button
+                class="filter-button active"
+                hx-get="/visualizations/data?portfolioType=Wszystkie"
+                hx-target="#chart-container"
+                hx-swap="innerHTML"
+            >Wszystkie</button>
+            
+            // Pętla generująca przyciski dla każdego typu portfela
+            for _, pType := range portfolioTypes {
+                <button
+                    class="filter-button"
+                    hx-get={ templ.URL(fmt.Sprintf("/visualizations/data?portfolioType=%s", pType)) }
+                    hx-target="#chart-container"
+                    hx-swap="innerHTML"
+                >{ pType }</button>
+            }
+            <br><br>
+            for _, aType := range assetTypes {
+                <button
+                    class="filter-button"
+                    hx-get={ templ.URL(fmt.Sprintf("/visualizations/data?portfolioType=%s", aType)) }
+                    hx-target="#chart-container"
+                    hx-swap="innerHTML"
+                >{ aType }</button>
+            }
+        </div>
+
+        // Kontener, do którego HTMX będzie ładował wyrenderowany wykres
+        // hx-trigger="load" sprawi, że wykres załaduje się od razu po wejściu na stronę
+        <div id="chart-container" hx-get="/visualizations/data?portfolioType=Wszystkie" hx-trigger="load">
+            <div class="loading-spinner"></div> // Opcjonalny spinner ładowania
+        </div>
+        
+
+        // Prosty skrypt JS do zarządzania klasą 'active' na przyciskach
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const container = document.querySelector('.filter-buttons');
+                if (container) {
+                    container.addEventListener('click', function (event) {
+                        if (event.target.classList.contains('filter-button')) {
+                            // Usuń klasę 'active' ze wszystkich przycisków
+                            container.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
+                            // Dodaj klasę 'active' do klikniętego przycisku
+                            event.target.classList.add('active');
+                        }
+                    });
+                }
+            });
+        </script>
+    </div>
 }

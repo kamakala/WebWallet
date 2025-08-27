@@ -353,12 +353,12 @@ func Home(
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</tbody></table><p><a href=\"/add-asset\">Dodaj nowe aktywo</a></p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</tbody></table><p><a href=\"/add-asset\" class=\"update-button\">Dodaj nowe aktywo</a></p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<p>Brak aktywów w portfelu.</p><p><a href=\"/add-asset\">Dodaj nowe aktywo</a></p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<p>Brak aktywów w portfelu.</p><p><a href=\"/add-asset\" class=\"update-button\">Dodaj nowe aktywo</a></p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -456,12 +456,12 @@ func Home(
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</tbody></table><br><p><a href=\"/add-subscription\">Dodaj nową subskrypcję</a></p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</tbody></table><br><p><a href=\"/add-subscription\" class=\"update-button\">Dodaj nową subskrypcję</a></p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "<p>Brak subskrypcji.</p><p><a href=\"/add-subscription\">Dodaj nową subskrypcję</a></p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "<p>Brak subskrypcji.</p><p><a href=\"/add-subscription\" class=\"update-button\">Dodaj nową subskrypcję</a></p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

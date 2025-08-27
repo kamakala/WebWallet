@@ -73,7 +73,7 @@ func Layout(title string, content templ.Component, portfolioData *models.Investm
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</title><link rel=\"stylesheet\" href=\"/static/css/style.css\"><script src=\"https://unpkg.com/htmx.org@1.9.10\" defer></script><script src=\"https://cdn.jsdelivr.net/npm/chart.js\" defer></script></head><body><header><h1>Mój Portfel Inwestycyjny</h1><form action=\"/toggle-theme\" method=\"POST\" style=\"display: inline;\"><button id=\"theme-toggle\" class=\"theme-toggle\" title=\"Zmień motyw\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</title><link rel=\"stylesheet\" href=\"static/css/style.css\"><script src=\"https://unpkg.com/htmx.org@1.9.10\" defer></script><script src=\"https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js\"></script></head><body><header><h1>Mój Portfel Inwestycyjny</h1><form action=\"/toggle-theme\" method=\"POST\" style=\"display: inline;\"><button id=\"theme-toggle\" class=\"theme-toggle\" title=\"Zmień motyw\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

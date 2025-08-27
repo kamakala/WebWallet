@@ -1,0 +1,27 @@
+package views
+
+// Ten komponent przyjmuje ID dla diva oraz dane w formacie JSON
+templ Chart(chartID string, jsonData map[string]interface{}) {
+	// Div, w którym ECharts narysuje wykres
+	<div class=item id={ chartID } style="width: 100%; height: 500px;"></div>
+
+	// Skrypt, który inicjalizuje wykres
+	<script type="text/javascript">
+		// Czekamy na załadowanie całego HTMX-owego contentu
+		(function() {
+			var chartDom = document.getElementById({{ chartID }});
+			if (chartDom) {
+				var myChart = echarts.init(chartDom);
+				// Używamy templ.Raw, aby dane JSON nie zostały "uescape'owane"
+				//var option = JSON.parse({{jsonData}});
+				var option = {{jsonData}};
+				myChart.setOption(option);
+
+				// Opcjonalnie: dostosuj rozmiar wykresu przy zmianie rozmiaru okna
+				window.addEventListener('resize', function() {
+					myChart.resize();
+				});
+			}
+		})();
+	</script>
+}

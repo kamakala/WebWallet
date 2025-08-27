@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
+
 	"fmt"
 	"log"
 	"net/http"
@@ -12,6 +12,9 @@ import (
 	"webwallet/internal/models"
 	"webwallet/internal/repository"
 	"webwallet/internal/views" // Importujemy pakiet z komponentami templ
+
+	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/opts"
 )
 
 // PageData (teraz już nie tak potrzebna, ale zostawiamy na razie strukturę danych przekazywaną do widoku)
@@ -888,60 +891,65 @@ func (h *AppHandler) renderUpdatePriceForm(w http.ResponseWriter, r *http.Reques
 	//fmt.Fprintf(w, "<h1>Update Price for %s</h1><p>%s</p><form method='POST'><label>New Price:</label><input type='text' name='currentPrice' value='%.2f'><button type='submit'>Update</button></form>", asset.Name, message, asset.CurrentPrice)
 }
 
-// VisualizationsHandler wyświetla stronę z wykresami
+// VisualizationsHandler - renderuje główną stronę /visualizations
 func (h *AppHandler) VisualizationsHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
 	portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
 	if err != nil {
-		log.Printf("Błąd ładowania portfela: %v", err)
-		http.Error(w, "Nie udało się załadować portfela.", http.StatusInternalServerError)
+		http.Error(w, "Nie udało się załadować portfela", http.StatusInternalServerError)
 		return
 	}
 
-	portfolioTypes := make(map[string]struct{})
+	// Zbierz unikalne typy portfeli, aby stworzyć przyciski
+	uniqueWalletTypes := make(map[string]struct{})
 	for _, asset := range portfolio.Assets {
 		if asset.WalletType != "" {
-			portfolioTypes[asset.WalletType] = struct{}{}
+			uniqueWalletTypes[asset.WalletType] = struct{}{}
 		}
 	}
 
-	var typesList []string
-	for t := range portfolioTypes {
-		typesList = append(typesList, t)
+	// Zbierz unikalne typy aktywów, aby stworzyć przyciski
+	uniqueAssetTypes := make(map[string]struct{})
+	for _, asset := range portfolio.Assets {
+		if asset.Type != "" {
+			uniqueAssetTypes[asset.Type] = struct{}{}
+		}
 	}
 
-	// Przygotowanie danych dla początkowego widoku "Wszystkie"
-	initialDataString, err := prepareChartData(portfolio.Assets)
-	if err != nil {
-		log.Printf("Błąd przygotowania danych wykresu: %v", err)
-		http.Error(w, "Błąd renderowania wykresów.", http.StatusInternalServerError)
-		return
+	portfolioTypes := make([]string, 0, len(uniqueWalletTypes))
+	for pType := range uniqueWalletTypes {
+		portfolioTypes = append(portfolioTypes, pType)
 	}
 
-	if err := views.Visualizations(typesList, initialDataString).Render(r.Context(), w); err != nil {
-		http.Error(w, "Failed to render template", http.StatusInternalServerError)
-		log.Printf("Error rendering visualization template: %v", err)
+	assetTypes := make([]string, 0, len(uniqueAssetTypes))
+	for aType := range uniqueAssetTypes {
+		assetTypes = append(assetTypes, aType)
 	}
+
+	// Renderuj całą stronę
+	views.VisualizationsPage(portfolioTypes, assetTypes, portfolio).Render(r.Context(), w)
 }
 
-// GetVisualizationDataHandler zwraca fragment HTML z danymi dla HTMX
+// GetVisualizationDataHandler - renderuje i zwraca sam wykres (dla HTMX)
 func (h *AppHandler) GetVisualizationDataHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
 	portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
 	if err != nil {
-		http.Error(w, "Nie udało się załadować portfela.", http.StatusInternalServerError)
+		http.Error(w, "Nie udało się załadować portfela", http.StatusInternalServerError)
 		return
 	}
 
+	// 1. Pobierz typ portfela z query parametru
 	portfolioType := r.URL.Query().Get("portfolioType")
-	log.Printf("Pobieranie danych dla typu portfela: %s", portfolioType)
+	log.Printf("Rendering update price form for asset: %s", portfolioType)
 
+	// 2. Filtruj aktywa
 	var filteredAssets []models.Asset
-	if portfolioType == "Wszystkie" {
+	if portfolioType == "Wszystkie" || portfolioType == "" {
 		filteredAssets = portfolio.Assets
 	} else {
 		for _, asset := range portfolio.Assets {
@@ -951,53 +959,46 @@ func (h *AppHandler) GetVisualizationDataHandler(w http.ResponseWriter, r *http.
 		}
 	}
 
-	dataString, err := prepareChartData(filteredAssets)
-	if err != nil {
-		log.Printf("Błąd przygotowania danych wykresu: %v", err)
-		http.Error(w, "Błąd renderowania wykresów.", http.StatusInternalServerError)
-		return
-	}
-
-	if err := views.VisualizationCharts(dataString).Render(r.Context(), w); err != nil {
-		http.Error(w, "Failed to render charts template", http.StatusInternalServerError)
-		log.Printf("Error rendering charts template: %v", err)
-	}
-}
-
-// Nowa struktura do parsowania odpowiedzi JSON z FMP dla danych historycznych
-type FmpHistoricalPriceFull struct {
-	Symbol     string `json:"symbol"`
-	Historical []struct {
-		Close float64 `json:"close"` // To jest cena EOD (zamknięcia), której szukamy
-	} `json:"historical"`
-}
-
-// Funkcja pomocnicza do przygotowania danych JSON
-func prepareChartData(assets []models.Asset) (string, error) {
-	type ChartData struct {
-		Labels []string  `json:"labels"`
-		Values []float64 `json:"values"`
-	}
-
-	var chartData = ChartData{
-		Labels: make([]string, 0),
-		Values: make([]float64, 0),
-	}
-
+	// 3. Przygotuj dane dla wykresu
+	// Agregujemy wartość per nazwa aktywa (np. "Bitcoin", "Akcje XYZ")
 	valueByAsset := make(map[string]float64)
-	for _, asset := range assets {
+	for _, asset := range filteredAssets {
 		valueByAsset[asset.Name] += asset.Quantity * asset.CurrentPrice
 	}
 
+	// Konwertujemy mapę na format wymagany przez go-echarts
+	pieData := make([]opts.PieData, 0)
 	for name, value := range valueByAsset {
-		chartData.Labels = append(chartData.Labels, name)
-		chartData.Values = append(chartData.Values, value)
+		pieData = append(pieData, opts.PieData{Name: name, Value: fmt.Sprintf("%.2f", value)})
 	}
 
-	dataJSON, err := json.Marshal(chartData)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal chart data: %w", err)
-	}
+	// 4. Utwórz i skonfiguruj wykres kołowy
+	pie := charts.NewPie()
+	pie.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title:    "Skład portfela",
+			Subtitle: "Podział aktywów według bieżącej wartości (" + portfolioType + ")",
+		}),
+		// Wyłącz legendę w opcjach globalnych, dodamy ją w serii
+	)
 
-	return string(dataJSON), nil
+	pie.AddSeries("Wartość", pieData).
+		SetSeriesOptions(
+			charts.WithPieChartOpts(opts.PieChart{
+				Radius: []string{"40%", "75%"},
+			}),
+			charts.WithLabelOpts(opts.Label{
+
+				Formatter: "{b}: {d}%", // Pokaż nazwę i procent
+			}),
+		)
+
+	// <-- KLUCZOWA ZMIANA -->
+	// 5. Zamiast pie.Render(w), konwertujemy opcje wykresu do JSON
+	chartJSON := pie.JSON()
+
+	// 6. Renderujemy nasz nowy komponent `Chart`, przekazując mu JSON
+	// Używamy `views.Chart` zamiast `pie.Render`
+	chartID := "portfolio-pie-chart" // Można generować losowe ID w razie potrzeby
+	views.Chart(chartID, chartJSON).Render(r.Context(), w)
 }

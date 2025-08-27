@@ -139,7 +139,7 @@ func RenderUpdateWalletTypeContent(asset models.Asset, message string) templ.Com
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\"><div class=\"form-group\"><label for=\"newWalletType\">Nowy typ portfela:</label> <input type=\"text\" id=\"newWalletType\" name=\"new_wallet_type\" required></div><button type=\"submit\">Aktualizuj Aktywo</button></form><p><a href=\"/\">Powrót do portfela</a></p></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\"><div class=\"form-group\"><label for=\"newWalletType\">Nowy typ portfela:</label> <input type=\"text\" id=\"newWalletType\" name=\"new_wallet_type\" required></div><button type=\"submit\">Aktualizuj Aktywo</button></form><p><a href=\"/\" class=\"update-button\">Powrót do portfela</a></p></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -153,7 +153,7 @@ func RenderUpdateAssetContent(asset models.Asset, message string) templ.Componen
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\"><div class=\"form-group\"><label for=\"additionalQuantity\">Dodatkowa Ilość:</label> <input type=\"number\" id=\"additionalQuantity\" name=\"additional_quantity\" step=\"0.01\" min=\"0\" required></div><div class=\"form-group\"><label for=\"newPurchasePrice\">Cena Zakupu dla Nowej Ilości:</label> <input type=\"number\" id=\"newPurchasePrice\" name=\"new_purchase_price\" step=\"0.01\" min=\"0\" required></div><button type=\"submit\">Aktualizuj Aktywo</button></form><p><a href=\"/\">Powrót do portfela</a></p></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\"><div class=\"form-group\"><label for=\"additionalQuantity\">Dodatkowa Ilość:</label> <input type=\"number\" id=\"additionalQuantity\" name=\"additional_quantity\" step=\"0.01\" min=\"0\" required></div><div class=\"form-group\"><label for=\"newPurchasePrice\">Cena Zakupu dla Nowej Ilości:</label> <input type=\"number\" id=\"newPurchasePrice\" name=\"new_purchase_price\" step=\"0.01\" min=\"0\" required></div><button type=\"submit\">Aktualizuj Aktywo</button></form><p><a href=\"/\" class=\"update-button\">Powrót do portfela</a></p></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

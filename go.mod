@@ -4,6 +4,8 @@ go 1.24.5
 
 require go.mongodb.org/mongo-driver v1.17.4
 
+require github.com/go-echarts/go-echarts/v2 v2.6.1 // indirect
+
 require (
 	github.com/a-h/templ v0.3.920
 	github.com/golang/snappy v0.0.4 // indirect
