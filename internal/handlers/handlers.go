@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -932,7 +933,7 @@ func (h *AppHandler) VisualizationsHandler(w http.ResponseWriter, r *http.Reques
 	views.VisualizationsPage(portfolioTypes, assetTypes, portfolio).Render(r.Context(), w)
 }
 
-// GetVisualizationDataHandler - renderuje i zwraca sam wykres (dla HTMX)
+// GetVisualizationDataHandler - teraz renderuje cały panel filtrów i wykres
 func (h *AppHandler) GetVisualizationDataHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
@@ -943,62 +944,142 @@ func (h *AppHandler) GetVisualizationDataHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// 1. Pobierz typ portfela z query parametru
+	// 1. Pobierz WSZYSTKIE parametry filtrów
 	portfolioType := r.URL.Query().Get("portfolioType")
-	log.Printf("Rendering update price form for asset: %s", portfolioType)
+	assetType := r.URL.Query().Get("assetType")
+	chartType := r.URL.Query().Get("chartType")
 
-	// 2. Filtruj aktywa
-	var filteredAssets []models.Asset
-	if portfolioType == "Wszystkie" || portfolioType == "" {
-		filteredAssets = portfolio.Assets
+	// Ustaw wartości domyślne, jeśli są puste
+	if portfolioType == "" {
+		portfolioType = "Wszystkie"
+	}
+	if assetType == "" {
+		assetType = "Wszystkie"
+	}
+	if chartType == "" {
+		chartType = "pie" // Domyślny typ wykresu
+	}
+
+	// 2. Filtruj aktywa w dwóch krokach
+	var tempAssets []models.Asset
+	// Krok 1: Filtrowanie po typie portfela
+	if portfolioType == "Wszystkie" {
+		tempAssets = portfolio.Assets
 	} else {
 		for _, asset := range portfolio.Assets {
 			if asset.WalletType == portfolioType {
+				tempAssets = append(tempAssets, asset)
+			}
+		}
+	}
+
+	// Krok 2: Filtrowanie wyniku po typie aktywa
+	var filteredAssets []models.Asset
+	if assetType == "Wszystkie" {
+		filteredAssets = tempAssets
+	} else {
+		for _, asset := range tempAssets {
+			if asset.Type == assetType { // Załóżmy, że model Asset ma pole `Type`
 				filteredAssets = append(filteredAssets, asset)
 			}
 		}
 	}
 
-	// 3. Przygotuj dane dla wykresu
-	// Agregujemy wartość per nazwa aktywa (np. "Bitcoin", "Akcje XYZ")
+	// 3. Przygotuj dane dla wykresu (bez zmian)
 	valueByAsset := make(map[string]float64)
 	for _, asset := range filteredAssets {
 		valueByAsset[asset.Name] += asset.Quantity * asset.CurrentPrice
 	}
 
-	// Konwertujemy mapę na format wymagany przez go-echarts
-	pieData := make([]opts.PieData, 0)
-	for name, value := range valueByAsset {
-		pieData = append(pieData, opts.PieData{Name: name, Value: fmt.Sprintf("%.2f", value)})
-	}
+	// 4. Utwórz i skonfiguruj wykres na podstawie parametru `chartType`
+	var chartJSON map[string]interface{}
+	chartID := "portfolio-chart"
 
-	// 4. Utwórz i skonfiguruj wykres kołowy
-	pie := charts.NewPie()
-	pie.SetGlobalOptions(
-		charts.WithTitleOpts(opts.Title{
-			Title:    "Skład portfela",
-			Subtitle: "Podział aktywów według bieżącej wartości (" + portfolioType + ")",
-		}),
-		// Wyłącz legendę w opcjach globalnych, dodamy ją w serii
-	)
-
-	pie.AddSeries("Wartość", pieData).
-		SetSeriesOptions(
-			charts.WithPieChartOpts(opts.PieChart{
-				Radius: []string{"40%", "75%"},
-			}),
-			charts.WithLabelOpts(opts.Label{
-
-				Formatter: "{b}: {d}%", // Pokaż nazwę i procent
+	switch chartType {
+	case "bar":
+		// Logika dla wykresu słupkowego
+		barData := make([]opts.BarData, 0)
+		for name, value := range valueByAsset {
+			barData = append(barData, opts.BarData{Name: name, Value: fmt.Sprintf("%.2f", value)})
+		}
+		bar := charts.NewBar()
+		bar.SetGlobalOptions(
+			charts.WithTitleOpts(opts.Title{
+				Title:    "Skład portfela",
+				Subtitle: "Podział aktywów według bieżącej wartości (" + portfolioType + ")",
 			}),
 		)
+		bar.SetXAxis("test2").AddSeries("test", barData)
+		// ...konfiguracja osi i danych...
+		chartJSON = bar.JSON()
+	case "pie":
+		fallthrough // Jeśli nie jest to "bar", domyślnie użyj "pie"
+	default:
+		// Logika dla wykresu kołowego (jak wcześniej)
+		pieData := make([]opts.PieData, 0)
+		for name, value := range valueByAsset {
+			pieData = append(pieData, opts.PieData{Name: name, Value: fmt.Sprintf("%.2f", value)})
+		}
+		pie := charts.NewPie()
+		pie.SetGlobalOptions(
+			charts.WithTitleOpts(opts.Title{
+				Title:    "Skład portfela",
+				Subtitle: "Podział aktywów według bieżącej wartości (" + portfolioType + ")",
+			}),
+			// Wyłącz legendę w opcjach globalnych, dodamy ją w serii
+		)
 
-	// <-- KLUCZOWA ZMIANA -->
-	// 5. Zamiast pie.Render(w), konwertujemy opcje wykresu do JSON
-	chartJSON := pie.JSON()
+		pie.AddSeries("Wartość", pieData).
+			SetSeriesOptions(
+				charts.WithPieChartOpts(opts.PieChart{
+					Radius: []string{"40%", "75%"},
+				}),
+				charts.WithLabelOpts(opts.Label{
 
-	// 6. Renderujemy nasz nowy komponent `Chart`, przekazując mu JSON
-	// Używamy `views.Chart` zamiast `pie.Render`
-	chartID := "portfolio-pie-chart" // Można generować losowe ID w razie potrzeby
-	views.Chart(chartID, chartJSON).Render(r.Context(), w)
+					Formatter: "{b}: {d}%", // Pokaż nazwę i procent
+				}),
+			)
+		chartJSON = pie.JSON()
+	}
+
+	// Znajdź unikalne typy portfeli do stworzenia przycisków
+	portfolioTypesMap := make(map[string]struct{})
+	for _, asset := range portfolio.Assets {
+		if asset.WalletType != "" {
+			portfolioTypesMap[asset.WalletType] = struct{}{}
+		}
+	}
+
+	// Konwertuj mapę na slice, żeby zachować kolejność
+	var portfolioTypes []string
+	for t := range portfolioTypesMap {
+		portfolioTypes = append(portfolioTypes, t)
+	}
+	sort.Strings(portfolioTypes)
+
+	// Znajdź unikalne typy aktywów do stworzenia przycisków
+	assetTypesMap := make(map[string]struct{})
+	for _, asset := range portfolio.Assets {
+		if asset.Type != "" {
+			assetTypesMap[asset.Type] = struct{}{}
+		}
+	}
+
+	// Konwertuj mapę na slice, żeby zachować kolejność
+	var assetTypes []string
+	for t := range assetTypesMap {
+		assetTypes = append(assetTypes, t)
+	}
+	sort.Strings(assetTypes)
+
+	// Przekazujemy aktywne filtry, aby komponent wiedział co podświetlić
+	views.FilterableChart(
+		portfolioTypes,
+		assetTypes,
+		portfolioType,
+		assetType,
+		chartType,
+		chartID,
+		chartJSON,
+	).Render(r.Context(), w)
 }

@@ -6,68 +6,117 @@ import (
 
 )
 
-// Komponent strony z wizualizacjami
+// ZMIANA: Główna strona renderuje teraz początkowy stan komponentu FilterableChart
 templ VisualizationsPage(portfolioTypes []string, assetTypes []string, portfolio *models.InvestmentPortfolio) {
-    // Używamy głównego layoutu, przekazując mu treść specyficzną dla tej strony
-    @Layout("Wizualizacje Portfela", visualizationsContent(portfolioTypes, assetTypes), portfolio, "", "", "", 0, 0)
+    @Layout("Wizualizacje Portfela", FilterableChart(portfolioTypes, assetTypes, "Wszystkie", "Wszystkie", "pie", "portfolio-chart", nil),portfolio, "", "", "", 0, 0) {
+        // Renderujemy początkowy stan wykresu - bez danych, ale z filtrami
+        // W prawdziwej aplikacji, ten handler powinien wywołać logikę z GetVisualizationDataHandler
+        // z domyślnymi parametrami i zwrócić ten komponent.
+        // Dla uproszczenia, na razie wstawiamy go bezpośrednio.
+        
+    }
 }
 
-// Komponent zawierający logikę filtrów i kontener na wykres
-templ visualizationsContent(portfolioTypes []string, assetTypes []string) {
+// NOWOŚĆ: Komponent-kontener, który jest celem dla HTMX
+templ FilterableChart(allPortfolioTypes, allAssetTypes []string, activePType, activeAType, activeCType, chartID string, chartJSON map[string]interface{}) {
+    // Ten div będzie podmieniany przez HTMX
+    <div id="filterable-content">
+        @filtersContent(allPortfolioTypes, allAssetTypes, activePType, activeAType, activeCType)
+        
+        <div id="chart-container">
+            // Renderuj wykres tylko jeśli są dla niego dane
+            if chartJSON != nil {
+                @Chart(chartID, chartJSON)
+            } else {
+                <p>Wybierz filtry, aby zobaczyć wykres.</p>
+            }
+        </div>
+    </div>
+}
+
+
+// ZMIANA: Komponent z filtrami przyjmuje aktywne wartości i buduje dynamiczne linki
+templ filtersContent(allPortfolioTypes, allAssetTypes []string, activePType, activeAType, activeCType string) {
     <div class="visualizations-container">
         <h2>Wizualizacje Portfela</h2>
+
+        // --- Filtry Typu Portfela ---
         <p>Podział według typów strategii.</p>
         <div class="filter-buttons">
-            // Przycisk "Wszystkie" - ładuje dane dla całego portfela
             <button
-                class="filter-button active"
-                hx-get="/visualizations/data?portfolioType=Wszystkie"
-                hx-target="#chart-container"
+                class={ "filter-button", templ.KV("active", "Wszystkie" == activePType) }
+                hx-get={ templ.URL(fmt.Sprintf("/visualizations/data?portfolioType=Wszystkie&assetType=%s&chartType=%s", activeAType, activeCType)) }
+                hx-target="#filterable-content"
                 hx-swap="innerHTML"
             >Wszystkie</button>
-            
-            // Pętla generująca przyciski dla każdego typu portfela
-            for _, pType := range portfolioTypes {
+            for _, pType := range allPortfolioTypes {
                 <button
-                    class="filter-button"
-                    hx-get={ templ.URL(fmt.Sprintf("/visualizations/data?portfolioType=%s", pType)) }
-                    hx-target="#chart-container"
+                    class={ "filter-button", templ.KV("active", pType == activePType) }
+                    hx-get={ templ.URL(fmt.Sprintf("/visualizations/data?portfolioType=%s&assetType=%s&chartType=%s", pType, activeAType, activeCType)) }
+                    hx-target="#filterable-content"
                     hx-swap="innerHTML"
                 >{ pType }</button>
             }
-            <br><br>
-            for _, aType := range assetTypes {
+        </div>
+
+        // --- NOWOŚĆ: Filtry Typu Aktywa ---
+        <p>Podział według typu aktywa.</p>
+        <div class="filter-buttons">
+            <button
+                class={ "filter-button", templ.KV("active", "Wszystkie" == activeAType) }
+                hx-get={ templ.URL(fmt.Sprintf("/visualizations/data?portfolioType=%s&assetType=Wszystkie&chartType=%s", activePType, activeCType)) }
+                hx-target="#filterable-content"
+                hx-swap="innerHTML"
+            >Wszystkie</button>
+            for _, aType := range allAssetTypes {
                 <button
-                    class="filter-button"
-                    hx-get={ templ.URL(fmt.Sprintf("/visualizations/data?portfolioType=%s", aType)) }
-                    hx-target="#chart-container"
+                    class={ "filter-button", templ.KV("active", aType == activeAType) }
+                    hx-get={ templ.URL(fmt.Sprintf("/visualizations/data?portfolioType=%s&assetType=%s&chartType=%s", activePType, aType, activeCType)) }
+                    hx-target="#filterable-content"
                     hx-swap="innerHTML"
                 >{ aType }</button>
             }
         </div>
 
-        // Kontener, do którego HTMX będzie ładował wyrenderowany wykres
-        // hx-trigger="load" sprawi, że wykres załaduje się od razu po wejściu na stronę
-        <div id="chart-container" hx-get="/visualizations/data?portfolioType=Wszystkie" hx-trigger="load">
-            <div class="loading-spinner"></div> // Opcjonalny spinner ładowania
+        // --- NOWOŚĆ: Zmiana Typu Wykresu ---
+        <p>Typ wykresu.</p>
+        <div class="filter-buttons">
+            <button
+                class={ "filter-button", templ.KV("active", "pie" == activeCType) }
+                hx-get={ templ.URL(fmt.Sprintf("/visualizations/data?portfolioType=%s&assetType=%s&chartType=pie", activePType, activeAType)) }
+                hx-target="#filterable-content"
+                hx-swap="innerHTML"
+            >Kołowy</button>
+            <button
+                class={ "filter-button", templ.KV("active", "bar" == activeCType) }
+                hx-get={ templ.URL(fmt.Sprintf("/visualizations/data?portfolioType=%s&assetType=%s&chartType=bar", activePType, activeAType)) }
+                hx-target="#filterable-content"
+                hx-swap="innerHTML"
+            >Słupkowy</button>
         </div>
-        
-
-        // Prosty skrypt JS do zarządzania klasą 'active' na przyciskach
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const container = document.querySelector('.filter-buttons');
-                if (container) {
-                    container.addEventListener('click', function (event) {
-                        if (event.target.classList.contains('filter-button')) {
-                            // Usuń klasę 'active' ze wszystkich przycisków
-                            container.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
-                            // Dodaj klasę 'active' do klikniętego przycisku
-                            event.target.classList.add('active');
-                        }
-                    });
-                }
-            });
-        </script>
     </div>
 }
+        
+
+//        // Prosty skrypt JS do zarządzania klasą 'active' na przyciskach
+//        <script>
+//            document.addEventListener('DOMContentLoaded', function () {
+//    // Użyj ogólnego selektora, który obejmie wszystkie grupy filtrów
+//    const filterContainers = document.querySelectorAll('.filter-buttons');
+//    
+//    filterContainers.forEach(container => {
+//        container.addEventListener('click', function (event) {
+//            // Sprawdź, czy kliknięty element to przycisk
+//            if (event.target.classList.contains('filter-button')) {
+//                // Usuń klasę 'active' tylko w obrębie tego konkretnego kontenera
+//                container.querySelectorAll('.filter-button').forEach(btn => btn.classList.remove('active'));
+//                
+//                // Dodaj klasę 'active' do klikniętego przycisku
+//                event.target.classList.add('active');
+//            }
+//        });
+//    });
+//});
+//        </script>
+//    </div>
+//}
