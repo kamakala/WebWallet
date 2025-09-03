@@ -23,26 +23,6 @@ This project is a modern web application designed for tracking and visualizing p
   * **net/http:** Go's standard library for building web servers.
 
 -----
-#### Database Setup
-
-This project uses **MongoDB** as its database. For local development, the recommended way to run the database is by using Docker. This ensures a consist>
-
-#### Prerequisites
-
-  * **Docker:** Make sure you have Docker installed and running on your system. You can download it from the [official Docker website](https://www.docke>
-
-##### Running MongoDB with Docker
-
-1.  **Start the MongoDB container:** Open your terminal and run the following command. This command pulls the official MongoDB image and starts a new co>
-
-    ```bash
-    docker compose up -d
-    ```
-You may need to run is with *sudo*
-
-2.  **Verify the container is running:** You can check the status and id of your container with the `docker ps` command.
-
-    ```bash
 
 ### Installation and Setup
 
