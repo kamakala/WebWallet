@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"webwallet/internal/middleware"
 	"webwallet/internal/models"
 	"webwallet/internal/repository"
 	"webwallet/internal/views" // Importujemy pakiet z komponentami templ
@@ -417,7 +418,7 @@ func (h *AppHandler) UpdateWalletTypeHandler(w http.ResponseWriter, r *http.Requ
 
 	var message string           // Komunikat dla użytkownika
 	var targetAsset models.Asset // Aktywo, które będziemy aktualizować/wyświetlać
-	var allowedTypes = []string{"Poduszka Finansowa", "Portfel Długoterminowy", "Portfel Krótkoteminowy"}
+	//var allowedTypes = []string{"Poduszka Finansowa", "Portfel Długoterminowy", "Portfel Krótkotreminowy"}
 	if r.Method == http.MethodPost {
 		// --- Obsługa żądania POST (przetwarzanie formularza) ---
 		err := r.ParseForm()
@@ -448,20 +449,19 @@ func (h *AppHandler) UpdateWalletTypeHandler(w http.ResponseWriter, r *http.Requ
 		}
 
 		// Sprawdź czy aktywo należy do dozwolonych typów
-		if !isInSlice(newWalletType, allowedTypes) {
-			// Tutaj umieść kod, który był w Twojej pętli
-			portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
-			if loadErr == nil {
-				for _, a := range portfolio.Assets {
-					if a.ID == assetID {
-						targetAsset = a
-						break
-					}
-				}
-			}
-			h.renderUpdateWalletTypeForm(w, r, targetAsset, message)
-			return
-		}
+		//if !isInSlice(newWalletType, allowedTypes) {
+		//	portfolio, loadErr := h.portfolioRepo.LoadPortfolio(ctx)
+		//	if loadErr == nil {
+		//		for _, a := range portfolio.Assets {
+		//			if a.ID == assetID {
+		//				targetAsset = a
+		//				break
+		//			}
+		//		}
+		//	}
+		//	h.renderUpdateWalletTypeForm(w, r, targetAsset, message)
+		//	return
+		//}
 
 		// Wywołaj funkcję repozytorium do aktualizacji aktywa
 		err = h.portfolioRepo.UpdateAssetWalletType(ctx, assetID, newWalletType)
@@ -923,11 +923,13 @@ func (h *AppHandler) VisualizationsHandler(w http.ResponseWriter, r *http.Reques
 	for pType := range uniqueWalletTypes {
 		portfolioTypes = append(portfolioTypes, pType)
 	}
+	sort.Strings(portfolioTypes)
 
 	assetTypes := make([]string, 0, len(uniqueAssetTypes))
 	for aType := range uniqueAssetTypes {
 		assetTypes = append(assetTypes, aType)
 	}
+	sort.Strings(assetTypes)
 
 	// Renderuj całą stronę
 	views.VisualizationsPage(portfolioTypes, assetTypes, portfolio).Render(r.Context(), w)
@@ -937,6 +939,7 @@ func (h *AppHandler) VisualizationsHandler(w http.ResponseWriter, r *http.Reques
 func (h *AppHandler) GetVisualizationDataHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
+	theme := middleware.GetTheme(ctx)
 
 	portfolio, err := h.portfolioRepo.LoadPortfolio(ctx)
 	if err != nil {
@@ -997,20 +1000,38 @@ func (h *AppHandler) GetVisualizationDataHandler(w http.ResponseWriter, r *http.
 
 	switch chartType {
 	case "bar":
-		// Logika dla wykresu słupkowego
+		// Logic for the bar chart
+		xAxisData := make([]string, 0)
 		barData := make([]opts.BarData, 0)
+
 		for name, value := range valueByAsset {
-			barData = append(barData, opts.BarData{Name: name, Value: fmt.Sprintf("%.2f", value)})
+			xAxisData = append(xAxisData, name)
+			barData = append(barData, opts.BarData{Value: fmt.Sprintf("%.2f", value)})
 		}
+
 		bar := charts.NewBar()
 		bar.SetGlobalOptions(
 			charts.WithTitleOpts(opts.Title{
 				Title:    "Skład portfela",
 				Subtitle: "Podział aktywów według bieżącej wartości (" + portfolioType + ")",
 			}),
+			charts.WithLegendOpts(opts.Legend{
+				Show: opts.Bool(true),
+			}),
+			charts.WithXAxisOpts(opts.XAxis{
+				AxisLabel: &opts.AxisLabel{
+					Show: opts.Bool(true),
+				},
+				Data: xAxisData,
+			}),
+			charts.WithYAxisOpts(opts.YAxis{
+				AxisLabel: &opts.AxisLabel{
+					Show: opts.Bool(true),
+				},
+			}),
 		)
-		bar.SetXAxis("test2").AddSeries("test", barData)
-		// ...konfiguracja osi i danych...
+
+		bar.AddSeries("Wartość", barData)
 		chartJSON = bar.JSON()
 	case "pie":
 		fallthrough // Jeśli nie jest to "bar", domyślnie użyj "pie"
@@ -1021,12 +1042,18 @@ func (h *AppHandler) GetVisualizationDataHandler(w http.ResponseWriter, r *http.
 			pieData = append(pieData, opts.PieData{Name: name, Value: fmt.Sprintf("%.2f", value)})
 		}
 		pie := charts.NewPie()
+
+		labelColor := "#000000"
+		if theme == "dark" {
+			labelColor = "#b4b4b4ff"
+		}
+
 		pie.SetGlobalOptions(
 			charts.WithTitleOpts(opts.Title{
 				Title:    "Skład portfela",
 				Subtitle: "Podział aktywów według bieżącej wartości (" + portfolioType + ")",
 			}),
-			// Wyłącz legendę w opcjach globalnych, dodamy ją w serii
+			charts.WithLegendOpts(opts.Legend{TextStyle: &opts.TextStyle{Color: labelColor}}),
 		)
 
 		pie.AddSeries("Wartość", pieData).
@@ -1035,8 +1062,8 @@ func (h *AppHandler) GetVisualizationDataHandler(w http.ResponseWriter, r *http.
 					Radius: []string{"40%", "75%"},
 				}),
 				charts.WithLabelOpts(opts.Label{
-
-					Formatter: "{b}: {d}%", // Pokaż nazwę i procent
+					Formatter: "{b}: {d}%",
+					Color:     labelColor,
 				}),
 			)
 		chartJSON = pie.JSON()
