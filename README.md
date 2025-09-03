@@ -23,6 +23,26 @@ This project is a modern web application designed for tracking and visualizing p
   * **net/http:** Go's standard library for building web servers.
 
 -----
+#### Database Setup
+
+This project uses **MongoDB** as its database. For local development, the recommended way to run the database is by using Docker. This ensures a consist>
+
+#### Prerequisites
+
+  * **Docker:** Make sure you have Docker installed and running on your system. You can download it from the [official Docker website](https://www.docke>
+
+##### Running MongoDB with Docker
+
+1.  **Start the MongoDB container:** Open your terminal and run the following command. This command pulls the official MongoDB image and starts a new co>
+
+    ```bash
+    docker compose up -d
+    ```
+You may need to run is with *sudo*
+
+2.  **Verify the container is running:** You can check the status and id of your container with the `docker ps` command.
+
+    ```bash
 
 ### Installation and Setup
 
@@ -32,20 +52,39 @@ To get the application up and running on your local machine, follow these steps.
 
   * **Go:** You need to have Go installed (version 1.18 or higher is recommended).
   * **templ:** The `templ` CLI is required for compiling templates. You can install it with `go install github.com/a-h/templ/cmd/templ@latest`.
+  * **Docker:** Make sure you have Docker installed and running on your system. You can download it from the [official Docker website](https://www.docker.com/).
 
-Running a MongoDB instance inside a Docker container is a standard and efficient way to manage your database for development. It isolates the database environment and makes it easy to set up and tear down. Here's how you can add this to your `README.md` file.
+Running a MongoDB instance inside a Docker container is a standard and efficient way to manage your database for development. It isolates the database environment and makes it easy to set up and tear down.
+
 
 -----
 
-### Database Setup 💾
+#### Steps
+
+1.  **Clone the repository:**
+
+    ```bash
+    git clone https://github.com/your-username/your-repo-name.git
+    cd your-repo-name
+    ```
+
+2.  **Install Go dependencies:**
+
+    ```bash
+    go mod tidy
+    ```
+
+3.  **Generate Go template files:** The `templ` files need to be compiled into Go code.
+
+    ```bash
+    templ generate
+    ```
+-----
+##### Database Setup
 
 This project uses **MongoDB** as its database. For local development, the recommended way to run the database is by using Docker. This ensures a consistent environment without needing to install MongoDB directly on your host machine.
 
-#### Prerequisites
-
-  * **Docker:** Make sure you have Docker installed and running on your system. You can download it from the [official Docker website](https://www.docker.com/).
-
-##### Running MongoDB with Docker
+###### Running MongoDB with Docker
 
 1.  **Start the MongoDB container:** Open your terminal and run the following command. This command pulls the official MongoDB image and starts a new container.  It maps the container's default port (`27017`) to the same port on your local machine, allowing your Go application to connect to it. Run where docker compose file is placed:
 
@@ -79,31 +118,18 @@ When you're finished with your development session, you can stop and remove the 
     docker rm my-mongo-db-id
     ```
 
-#### Steps
-
-1.  **Clone the repository:**
-
-    ```bash
-    git clone https://github.com/your-username/your-repo-name.git
-    cd your-repo-name
-    ```
-
-2.  **Install Go dependencies:**
-
-    ```bash
-    go mod tidy
-    ```
-
-3.  **Generate Go template files:** The `templ` files need to be compiled into Go code.
-
-    ```bash
-    templ generate
-    ```
+After setting up the database you can finally run the application
+------
 
 4.  **Run the application:**
 
     ```bash
     go run ./cmd/web/main.go
+    ```
+    or using the Make file
+    
+    ```bash
+    make run
     ```
 
 The application will be accessible at `http://localhost:8080`.
